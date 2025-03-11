@@ -15,6 +15,10 @@ public struct SpecificationsItem: Identifiable,Hashable {
     var title: String
     /// 描述
     var des: String = ""
+    public init(title: String, des: String = "") {
+        self.title = title
+        self.des = des
+    }
 }
 
  
@@ -23,27 +27,44 @@ public struct SpecificationsItem: Identifiable,Hashable {
 @available(iOSApplicationExtension,unavailable)
 @MainActor
 public struct LTBrowseDetailsView: View {
+    
     @State var produc: ProducModel
-    @State var items: Array<SpecificationsItem> =  []
+    @State var specifications: Array<SpecificationsItem>
     @State var title = "详情"
+ 
     @Environment(\.presentationMode) var presentationMode
-    public init(produc: ProducModel,items: Array<SpecificationsItem> = []) {
+    public init(produc: ProducModel,specifications: [SpecificationsItem] = []) {
         self.produc = produc
-        self.items = items
+      
+        if LTBrowseDataCenter.isUseSpecifications {
+            self.specifications =  LTBrowseDataCenter.getSpecifications()
+        }else {
+            self.specifications = specifications
+        }
+ 
     }
     public var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
           
             VStack(alignment: .leading) {
-                Image(produc.icon).resizable().frame(width: LTB_SCRE_W * 0.9, height: LTB_SCRE_W * 0.9)
+                
+                if let image = UIImage(named: produc.icon) {
+                   Image(uiImage: image)
+                       .resizable()
+                       .frame(width: LTB_SCRE_W * 0.9, height: LTB_SCRE_W * 0.9)
+               } else {
+                   // 显示默认图片或占位符
+                   Rectangle()
+                       .fill(Color.gray.opacity(0.2))
+                       .frame(width: LTB_SCRE_W * 0.9, height: LTB_SCRE_W * 0.9)
+               }
+            
             }
             .background(Color.white)
             .cornerRadius(12)
             .shadow(radius: 1)
-            Text(produc.name)
-            
-           
-            
+            Text(produc.name).frame(width: LTB_SCRE_W * 0.8).multilineTextAlignment(.center)
+ 
             VStack(spacing: 2) {
                 HStack {
                     Text("产品规格").font(.system(size: 18, weight: .medium))
@@ -53,7 +74,7 @@ public struct LTBrowseDetailsView: View {
                
                 VStack {
                    
-                    ForEach(items) {  item  in
+                    ForEach(specifications) {  item  in
                        setCell(item: item)
                     }
                 }
@@ -66,14 +87,12 @@ public struct LTBrowseDetailsView: View {
 
  
         }
-        //.frame(width: LTB_SCRE_W, height: LTB_SCRE_H)
         .background(LTB_BG_Color.edgesIgnoringSafeArea(.all))
         .navigationTitle(Text("\(self.title)"))
         .navigationBarItems(leading: AnyView(UIView.returnNavLeftView({
             presentationMode.wrappedValue.dismiss()
         })))
         .onAppear {
-            self.items = TestItems
         }
     }
     
@@ -87,7 +106,7 @@ public struct LTBrowseDetailsView: View {
                Text(_item.des)
             }.frame(height: 44)
             
-            if item != items.last {
+            if item != specifications.last {
                 Divider()
             }
         }
@@ -98,7 +117,7 @@ public struct LTBrowseDetailsView: View {
 }
 
 @MainActor let TestItems: Array<SpecificationsItem> = [
-    SpecificationsItem(title:"型号", des:"FD-R9101"),
+    SpecificationsItem(title:"型号1", des:"FD-R9101"),
     SpecificationsItem(title:"速别", des:"2速"),
     SpecificationsItem(title:"速别", des:"2速"),
     SpecificationsItem(title:"速别", des:"2速"),
@@ -109,6 +128,7 @@ public struct LTBrowseDetailsView: View {
 ]
 
 #Preview {
-    LTBrowseDetailsView(produc: ProducModel(name: "eRX电子液压碟刹", icon: ""), items: TestItems)
+    LTBrowseDetailsView(produc: ProducModel(name: "eRX电子液压碟刹afefawefawwwefaefaeafefaefaefaefaefafdafeawefawefawefaewfaewfaefawefawefawefawefaefawefaewfawefawefawefawefawefa", icon: ""), specifications: TestItems)
+ 
 }
  

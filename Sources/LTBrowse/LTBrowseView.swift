@@ -8,26 +8,6 @@
 import SwiftUI
 
 
-//@available(iOS 13.0, *)
-//struct PowerMeterListsModel: Equatable, Identifiable {
-//    static func == (lhs: PowerMeterListsModel, rhs: PowerMeterListsModel) -> Bool {
-//        return lhs.id == rhs.id
-//    }
-//    var id = UUID()
-//    var title: String
-//    var content: String = ""
-//    var showArrow: Bool = false
-//    var isEvent: Bool = true
-//    
-//    //var operateBlock: ((String)->Void)? = nil
-//    
-//}
-
-
-
-
-
-
 class LTBrowseViewModel: ObservableObject {
     @Published var headIcon: String = ""
 }
@@ -36,35 +16,55 @@ class LTBrowseViewModel: ObservableObject {
 @available(iOS 14.0, *)
 public struct LTBrowseView: View {
     
-    @State var headIcon: [String]
+    @State var headIcons: [String]
     @State var menuList: [BrowseViewItem]
-    @State var contentList: [BrowseViewItem]
+    @State var contentList: [BrowseViewItem]  
+    
     var toggleCange:((String, Bool)->Void)? = nil
     var operateBlock: ((String)->Void)? = nil
     
-    @StateObject var viewModel = LTBrowseViewModel()
+    //@StateObject var viewModel = LTBrowseViewModel()
     @State private var currentPage = 0
-    
+ 
     private let adapter = LTScreenAdapter.shared
     
-    public init(headIcons: [String], menus: [BrowseViewItem] , contents: [BrowseViewItem], toggleCange: ((String, Bool)->Void)?, operateBlock: ((String)->Void)?) {
-        self.menuList = menus
-        self.contentList = contents
-        self.headIcon = headIcons
+    public init(headIcons: [String] = [], menus: [BrowseViewItem] = [], contents: [BrowseViewItem] = [], toggleCange: ((String, Bool)->Void)?, operateBlock: ((String)->Void)?) {
+        
+        if LTBrowseDataCenter.isUseHeadIcon {
+            self.headIcons =  LTBrowseDataCenter.getHeadIconData()
+        }else {
+            self.headIcons = headIcons
+        }
+        
+        if LTBrowseDataCenter.isUseMenuList {
+            self.menuList =  LTBrowseDataCenter.getMenuList()
+        }else {
+            self.menuList = menus
+        }
+        
+        
+        if LTBrowseDataCenter.isUseMenuList {
+            self.contentList =  LTBrowseDataCenter.getContentList()
+        }else {
+            self.contentList = contents
+        }
+ 
         self.toggleCange = toggleCange
         self.operateBlock = operateBlock
+        
     }
     
     public var body: some View {
+ 
         NavigationView {
             ZStack {
                 GeometryReader { geometry in
                     ScrollView(.vertical, showsIndicators: false) {
                         VStack {
                             TabView(selection: $currentPage) {
-                                ForEach(0..<headIcon.count, id: \.self) { index in
+                                ForEach(0..<headIcons.count, id: \.self) { index in
                                     ZStack {
-                                        if let image = UIImage(named: headIcon[index]) {
+                                        if let image = UIImage(named: headIcons[index]) {
                                             Image(uiImage: image)
                                                 .resizable()
                                                 .scaledToFill()
@@ -93,7 +93,7 @@ public struct LTBrowseView: View {
                             .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
                             
                             HStack {
-                                ForEach(self.menuList, id: \.self) { menu in
+                                ForEach(menuList, id: \.self) { menu in
                                     Button {
                                         
                                     } label: {
@@ -146,7 +146,8 @@ public struct LTBrowseView: View {
             }
             .edgesIgnoringSafeArea(.all)
             .onAppear {
-                print("??\(LTScreenAdapter.SCRE_H) -----------\(LTScreenAdapter.SCRE_W)")
+                  print("??\(LTScreenAdapter.SCRE_H) -----------\(LTScreenAdapter.SCRE_W)")
+               
             }
         }.environment(\.locale, .init(identifier: currentLanguage()))
     }

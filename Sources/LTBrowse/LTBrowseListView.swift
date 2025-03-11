@@ -11,20 +11,22 @@ import SwiftUI
  
 public struct ProducModel: Identifiable, Hashable {
     public  let id = UUID()
-   var type: Int  = 0  // 产品类型
+   var typeId: Int  = 0  // 产品类型
    var name: String // 名称
-   var icon: String // 图片
+   var icon: String = ""  // 图片
    var parameter: String = "" // 产品参数
    var other: String = ""  //其他信息
    var des: String = "描述"
+   var title: String = "详情页面"
     
-    public init(_ type: Int = 0, name: String, icon: String, parameter: String = "", other: String = "", des: String = "") {
-        self.type = type
+    public init(_ typeId: Int = 0, name: String, icon: String = "", parameter: String = "", other: String = "", des: String = "", title: String = "") {
+        self.typeId = typeId
         self.name = name
         self.icon = icon
         self.parameter = parameter
         self.other = other
         self.des = des
+        self.title = title
     }
 }
 
@@ -45,30 +47,55 @@ public struct ProducType: Identifiable, Hashable {
 @available(iOS 14.0, *)
 public struct LTBrowseListView: View {
     
-    let tabItems = [ProducType(name: "eRX", gearValue: "10-12s"),
-                    ProducType(name: "eR9", gearValue: "10-12s"),
-                    ProducType(name: "RX", gearValue: "12s"),
-                    ProducType(name: "R9", gearValue: "11s"),
-                    ProducType(name: "R7", gearValue: "10s")]
-    
  
-    
-    
     @State var selectedTab: Int = 0
+    @State private var tabItems: [ProducType]
     /// 产品数据
-    @State private var productsByCategory: [[ProducModel]] = []
+    @State private var productsByCategory: [[ProducModel]]
     // 添加滚动视图的引用
     @Namespace private var animation
     @State private var scrollViewProxy: ScrollViewProxy? = nil
-    
+ 
     @Environment(\.presentationMode) var presentationMode
    
+    
+    public init(tabItems: [ProducType] = [], productsByCategory: [[ProducModel]] = [] ){
+        
+   
+        var _types =  tabItems
+        var _category =  productsByCategory
+        
+        if LTBrowseDataCenter.isUseProducTypes {
+            _types =  LTBrowseDataCenter.getProducTypes()
+        }
+        if LTBrowseDataCenter.isUseProductsByCategory {
+            _category = LTBrowseDataCenter.getProductsByCategory()
+        }
+        self.tabItems = _types
+ 
+        // 为每个分类创建对应的产品列表
+        if _types.count == _category.count {
+            self.productsByCategory = _category
+
+        }else {
+            var _pbCategory:[[ProducModel]] = []
+            _types.forEach { item in
+                if item.typeId < _category.count {
+                    _pbCategory.append(_category[item.typeId])
+                }else {
+                    _pbCategory.append([])
+                }
+            }
+            self.productsByCategory = _pbCategory
+        }
+ 
+    }
+    
     private let adapter = LTScreenAdapter.shared
     let colorDF = Color(UIColor(red: 223/255, green:  223/255, blue:  223/255, alpha: 1))
     let _size = LTB_SCRE_W * 0.9
     public  var body: some View {
-           
-//        VStack {
+
              GeometryReader { geometry in
                 VStack(spacing: 5)  {
   
@@ -123,17 +150,14 @@ public struct LTBrowseListView: View {
                 }
                 
              }
-//            .onAppear {
-                
-//            }
-//        }
+
         .background(LTB_BG_Color.edgesIgnoringSafeArea(.all))
         .navigationTitle( Text("产品列表"))
         .navigationBarItems(leading:   AnyView(UIView.returnNavLeftView({
             presentationMode.wrappedValue.dismiss()
         })))
         .onAppear {
-            setupProductData()
+          
         }
 //        .environment(\.locale, .init(identifier: currentLanguage()))
         
@@ -143,20 +167,10 @@ public struct LTBrowseListView: View {
 //        return Locale.current.language.languageCode?.identifier ?? "未知语言"
 //    }
     // 设置产品数据
-        private func setupProductData() {
-            // 为每个分类创建对应的产品列表
-            productsByCategory = tabItems.map { _ in
-                [
-                    ProducModel(name: "eRX 电子前拨  / 2x", icon: "FD"),
-                    ProducModel(name: "eRX 电子液压碟刹双控手柄 / 碳纤维faeefffff/n 碳纤维eeeeeeeeeeeeeeeee", icon: "SB"),
-                    ProducModel(name: "eRX 电子液压碟刹双控手柄 / 碳纤维", icon: "SB"),
-                    ProducModel(name: "eRX 电子液压碟刹双控手柄 / afeaefwaefaefaefaefawefa碳纤维faeefffff/n 碳纤维eeeeeeeeeeeeeeeee", icon: "SB"),
-                    ProducModel(name: "eRX 电子液压碟刹双控手柄 / 碳纤维", icon: "SB"),
-                    ProducModel(name: "eRX 电子前拨  / 2x", icon: "FD"),
-                    ProducModel(name: "eRX 电子液压碟刹双控手柄 / 碳纤维faeefffff/n 碳纤维eeeeeeeeeeeeeeeee", icon: "SB"),
-                    ProducModel(name: "eRX 电子液压碟刹双控手柄 / 碳纤维faeefffff/n 碳纤维eeeeeeeeeeeeeeeee", icon: "SB")
-                ]
-            }
+     func setupProductData(_ category:  [[ProducModel]] = []) {
+ 
+               
+ 
         }
  
 }
@@ -213,13 +227,24 @@ private struct ProductItemView: View {
             LTBrowseDetailsView(produc: item).navigationBarBackButtonHidden()
         } label: {
             VStack(alignment: .leading, spacing: adapter.setSize(size: 8)) {
-                Image(item.icon)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(maxWidth: .infinity)
-                    .background(Color.white)
-                    .cornerRadius(adapter.setSize(size: 10))
                 
+                if !item.icon.contains("") {
+                    Image(item.icon)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(maxWidth: .infinity)
+                        .background(Color.white)
+                        .cornerRadius(adapter.setSize(size: 10))
+               } else {
+                   // 显示默认图片或占位符
+                   Rectangle()
+                       .fill(Color.gray.opacity(0.2))
+                       .frame(maxWidth: .infinity)
+                       .frame(height: adapter.setHeight(160))
+                       .cornerRadius(adapter.setSize(size: 10))
+               }
+ 
+                    
                 Text(item.name)
                     .font(.system(size: adapter.setFont(size: 14)))
                     .foregroundColor(.black)
@@ -228,7 +253,6 @@ private struct ProductItemView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(adapter.setSize(size: 8))
-//            .frame(maxWidth: .infinity)
             .background(Color.white)
             .cornerRadius(adapter.setSize(size: 10))
             .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
