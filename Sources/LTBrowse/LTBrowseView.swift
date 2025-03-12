@@ -92,11 +92,22 @@ public struct LTBrowseView: View {
                                         
                                     } label: {
                                         VStack {
-                                            Image(menu.icon)
-                                                .resizable()
-                                                .scaledToFit()
-                                                .frame(width: adapter.setWidth(68),
-                                                      height: adapter.setWidth(68))
+                                            
+                                            if  menu.icon != "" {
+                                                Image(menu.icon)
+                                                    .resizable()
+                                                    .scaledToFit()
+                                                    .frame(width: adapter.setWidth(68),
+                                                          height: adapter.setWidth(68))
+                                           } else {
+                                               // 显示默认图片或占位符
+                                               Rectangle()
+                                                   .fill(Color.gray.opacity(0.2))
+                                                   .frame(width: adapter.setWidth(68),
+                                                         height: adapter.setWidth(68))
+                                                   .cornerRadius(adapter.setSize(size: 10))
+                                           }
+                                            
                                             Text(menu.title)
                                                 .font(.system(size: adapter.setFont(size: 13), weight: .medium))
                                                 .foregroundColor(menu.theme)
