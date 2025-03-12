@@ -50,7 +50,7 @@ public struct LTBrowseView: View {
     
     public var body: some View {
  
-        NavigationView {
+//        NavigationView {
             ZStack {
                 GeometryReader { geometry in
                     ScrollView(.vertical, showsIndicators: false) {
@@ -169,7 +169,7 @@ public struct LTBrowseView: View {
                     self.contentList = newValue
                 }
             }
-        }.environment(\.locale, .init(identifier: currentLanguage()))
+//        }.environment(\.locale, .init(identifier: currentLanguage()))
     }
     
     

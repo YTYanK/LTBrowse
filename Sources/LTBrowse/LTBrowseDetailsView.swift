@@ -33,6 +33,8 @@ public struct LTBrowseDetailsView: View {
     @State var title = "详情"
     @EnvironmentObject private var dataCenter: LTBrowseDataCenter
     @Environment(\.presentationMode) var presentationMode
+    
+    private let adapter = LTScreenAdapter.shared
     public init(produc: ProducModel,specifications: [SpecificationsItem] = []) {
         self.produc = produc
       
@@ -64,7 +66,7 @@ public struct LTBrowseDetailsView: View {
  
             VStack(spacing: 2) {
                 HStack {
-                    Text("产品规格").font(.system(size: 18, weight: .medium))
+                    Text(dataCenter.titls["DetailsViewSpecifications"]!).font(.system(size: 18, weight: .medium))
                     Spacer()
                 }.padding([.horizontal],20)
                     .padding(.top, 44)
@@ -85,8 +87,8 @@ public struct LTBrowseDetailsView: View {
  
         }
         .background(LTB_BG_Color.edgesIgnoringSafeArea(.all))
-        .navigationTitle(Text("\(self.title)"))
-        .navigationBarItems(leading: AnyView(UIView.returnNavLeftView({
+        .navigationTitle(Text(dataCenter.titls["DetailsViewTitle"]!))
+        .navigationBarItems(leading:  AnyView(UIView.returnNavLeftView(icon:"back_black",width: adapter.setSize(size: 12.5), height: adapter.setSize(size: 23) ,{
             presentationMode.wrappedValue.dismiss()
         })))
         .onAppear {

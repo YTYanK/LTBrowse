@@ -92,68 +92,85 @@ public struct LTBrowseListView: View {
     let _size = LTB_SCRE_W * 0.9
     public  var body: some View {
 
-             GeometryReader { geometry in
+ /*
+  tabBarController?.navigationItem.leftBarButtonItem = UIBarButtonItem(image: UIImage(named: imageString), style: .plain, target: self, action: #selector(self.leftClick))
+  tabBarController?.navigationItem.leftBarButtonItem?.tintColor = .lt_AEAEAE
+}else {
+  navigationItem.leftBarButtonItem = UIBarButtonItem(image: UIImage(named: imageString), style: .plain, target: self, action: #selector(self.leftClick))
+  navigationItem.leftBarButtonItem?.tintColor = .lt_AEAEAE
+  */
+        
+            GeometryReader { geometry in
                 VStack(spacing: 5)  {
-  
-                        // 顶部标签滚动视图
-                        ScrollViewReader { proxy in
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: adapter.setSize(size: 8)) {
-                                    ForEach(Array(tabItems.enumerated()), id: \.element) { index, tab in
-                                        TabItemView(
-                                            tab: tab,
-                                            isSelected: selectedTab == index,
-                                            namespace: animation
-                                        ) {
-                                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                                selectedTab = index
-                                                // 滚动到选中的标签
-                                                withAnimation {
-                                                    proxy.scrollTo(index, anchor: .center)
-                                                }
+                    
+                    // 顶部标签滚动视图
+                    ScrollViewReader { proxy in
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: adapter.setSize(size: 8)) {
+                                ForEach(Array(tabItems.enumerated()), id: \.element) { index, tab in
+                                    TabItemView(
+                                        tab: tab,
+                                        isSelected: selectedTab == index,
+                                        namespace: animation
+                                    ) {
+                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                            selectedTab = index
+                                            // 滚动到选中的标签
+                                            withAnimation {
+                                                proxy.scrollTo(index, anchor: .center)
                                             }
                                         }
-                                        .id(index)
                                     }
+                                    .id(index)
+                                }
+                            }
+                            .padding(.horizontal, adapter.setSize(size: 16))
+                        }
+                        .onAppear {
+                            scrollViewProxy = proxy
+                        }
+                    }
+                    
+                    TabView(selection: $selectedTab) {
+                        ForEach(Array(productsByCategory.enumerated()), id: \.offset) { index, products in
+                            ScrollView {
+                                StaggeredGrid(columns: 2, spacing: adapter.setSize(size: 10), list: products) { item in
+                                    ProductItemView(item: item).environmentObject(self.dataCenter)
                                 }
                                 .padding(.horizontal, adapter.setSize(size: 16))
                             }
-                            .onAppear {
-                                scrollViewProxy = proxy
-                            }
+                            .tag(index)
                         }
-           
-                        TabView(selection: $selectedTab) {
-                            ForEach(Array(productsByCategory.enumerated()), id: \.offset) { index, products in
-                                ScrollView {
-                                    StaggeredGrid(columns: 2, spacing: adapter.setSize(size: 10), list: products) { item in
-                                        ProductItemView(item: item).environmentObject(self.dataCenter)
-                                    }
-                                    .padding(.horizontal, adapter.setSize(size: 16))
-                                }
-                                .tag(index)
-                            }
-
+                        
+                    }
+                    .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never)) //添加联动
+                    .onChange(of: selectedTab) { newValue in
+                        // 当页面滑动改变时，同步滚动标签栏
+                        withAnimation {
+                            scrollViewProxy?.scrollTo(newValue, anchor: .center)
                         }
-                        .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never)) //添加联动
-                        .onChange(of: selectedTab) { newValue in
-                            // 当页面滑动改变时，同步滚动标签栏
-                            withAnimation {
-                                scrollViewProxy?.scrollTo(newValue, anchor: .center)
-                            }
-                        }
+                    }
                     
                 }
                 
-             }
-
+            }
+            
+//        }
         .background(LTB_BG_Color.edgesIgnoringSafeArea(.all))
-        .navigationTitle( Text(dataCenter.titls["ListViewTitle"]!))
-        .navigationBarItems(leading:   AnyView(UIView.returnNavLeftView({
+        .navigationBarHidden(false)
+       // .navigationTitle(dataCenter.titls["ListViewTitle"]!)
+        .toolbar {
+               ToolbarItem(placement: .principal) {
+                   Text(dataCenter.titls["ListViewTitle"]!)
+                       .foregroundColor(.black)  // 设置标题颜色
+               }
+           }
+        .navigationBarItems(leading:  AnyView(UIView.returnNavLeftView(icon:"back_arrow",width: adapter.setSize(size: 18), height: adapter.setSize(size: 18) ,{
             presentationMode.wrappedValue.dismiss()
         })))
+ 
         .onAppear {
-          
+ 
         }
         .onReceive(dataCenter.$producTypes) { newValue in
             if  LTBrowseDataCenter.isUseProducTypes {

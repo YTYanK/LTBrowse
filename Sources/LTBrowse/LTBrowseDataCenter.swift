@@ -473,9 +473,29 @@ extension UIView {
                     Image("back").resizable().frame(width: 18, height: 18)
 //                    Text("返回")
                 }
+            } 
+        }
+    }
+    static func returnNavLeftView(icon:String = "back", width: CGFloat, height: CGFloat, _ operate:(()-> Void)?) -> some View {
+        return HStack {
+            
+            Button {
+                operate?()
+            } label: {
+                HStack {
+                    if #available(iOS 15.0, *) {
+                        Image(icon).resizable().frame(width: width, height: height)
+                            .scaledToFit()
+                            .tint(.blue)
+                    } else {
+                        Image(icon).resizable().frame(width: width, height: height) //38, height: 69
+                            .scaledToFit()
+                            .foregroundColor(.red)
+                    } //
+//                    Text("返回")
+                }
             }
         }
-
     }
 }
  
