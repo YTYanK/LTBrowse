@@ -55,39 +55,35 @@ public struct LTBrowseListView: View {
     // 添加滚动视图的引用
     @Namespace private var animation
     @State private var scrollViewProxy: ScrollViewProxy? = nil
- 
+  
+    @EnvironmentObject private var dataCenter: LTBrowseDataCenter
     @Environment(\.presentationMode) var presentationMode
    
     
     public init(tabItems: [ProducType] = [], productsByCategory: [[ProducModel]] = [] ){
         
-   
-        var _types =  tabItems
-        var _category =  productsByCategory
         
-        if LTBrowseDataCenter.isUseProducTypes {
-            _types =  LTBrowseDataCenter.getProducTypes()
-        }
-        if LTBrowseDataCenter.isUseProductsByCategory {
-            _category = LTBrowseDataCenter.getProductsByCategory()
-        }
-        self.tabItems = _types
- 
+        let initialProductsTypes = LTBrowseDataCenter.isUseProducTypes ?  LTBrowseDataCenter.getProducTypes() :  tabItems
+        let initialProductsByCategory = LTBrowseDataCenter.isUseProductsByCategory ?  LTBrowseDataCenter.getProductsByCategory() : productsByCategory
+        
+        self._tabItems = State(initialValue: initialProductsTypes)
         // 为每个分类创建对应的产品列表
-        if _types.count == _category.count {
-            self.productsByCategory = _category
+        if initialProductsTypes.count == initialProductsByCategory.count {
+            self._productsByCategory = State(initialValue: initialProductsByCategory)
 
         }else {
             var _pbCategory:[[ProducModel]] = []
-            _types.forEach { item in
-                if item.typeId < _category.count {
-                    _pbCategory.append(_category[item.typeId])
+            initialProductsTypes.forEach { item in
+                if item.typeId < initialProductsByCategory.count {
+                    _pbCategory.append(initialProductsByCategory[item.typeId])
                 }else {
                     _pbCategory.append([])
                 }
             }
-            self.productsByCategory = _pbCategory
+            self._productsByCategory = State(initialValue: _pbCategory)
         }
+    
+ 
  
     }
     
@@ -131,7 +127,7 @@ public struct LTBrowseListView: View {
                             ForEach(Array(productsByCategory.enumerated()), id: \.offset) { index, products in
                                 ScrollView {
                                     StaggeredGrid(columns: 2, spacing: adapter.setSize(size: 10), list: products) { item in
-                                        ProductItemView(item: item)
+                                        ProductItemView(item: item).environmentObject(self.dataCenter)
                                     }
                                     .padding(.horizontal, adapter.setSize(size: 16))
                                 }
@@ -152,12 +148,24 @@ public struct LTBrowseListView: View {
              }
 
         .background(LTB_BG_Color.edgesIgnoringSafeArea(.all))
-        .navigationTitle( Text("产品列表"))
+        .navigationTitle( Text(dataCenter.titls["ListViewTitle"]!))
         .navigationBarItems(leading:   AnyView(UIView.returnNavLeftView({
             presentationMode.wrappedValue.dismiss()
         })))
         .onAppear {
           
+        }
+        .onReceive(dataCenter.$producTypes) { newValue in
+            if  LTBrowseDataCenter.isUseProducTypes {
+//                self.tabItems = newValue
+                self.setupProductData(newValue, nil)
+            }
+        }
+        .onReceive(dataCenter.$productsByCategoryData) { newValue in
+            if LTBrowseDataCenter.isUseProductsByCategory {
+//                self.productsByCategory = newValue
+                self.setupProductData(nil, newValue)
+            }
         }
 //        .environment(\.locale, .init(identifier: currentLanguage()))
         
@@ -167,11 +175,35 @@ public struct LTBrowseListView: View {
 //        return Locale.current.language.languageCode?.identifier ?? "未知语言"
 //    }
     // 设置产品数据
-     func setupProductData(_ category:  [[ProducModel]] = []) {
- 
-               
- 
-        }
+    func setupProductData(_ types: [ProducType]? = nil, _ category:  [[ProducModel]]? = nil) {
+                 var _types =  self.tabItems
+                 var _category = self.productsByCategory
+         
+                 if types != nil  {
+                     _types =  types!
+                 }
+                 if  category  != nil {
+                     _category = category!
+                 }
+                 self.tabItems = _types
+         
+                 // 为每个分类创建对应的产品列表
+                 if _types.count == _category.count {
+                     self.productsByCategory = _category
+         
+                 }else {
+                     var _pbCategory:[[ProducModel]] = []
+                     _types.forEach { item in
+                         if item.typeId < _category.count {
+                             _pbCategory.append(_category[item.typeId])
+                         }else {
+                             _pbCategory.append([])
+                         }
+                     }
+                     self.productsByCategory = _pbCategory
+                 }
+          
+     }
  
 }
 
@@ -221,14 +253,14 @@ private struct ProductItemView: View {
     let item: ProducModel
     private let adapter = LTScreenAdapter.shared
     @State private var isAppeared = false
-    
+    @EnvironmentObject private var dataCenter: LTBrowseDataCenter
     var body: some View {
         NavigationLink {
-            LTBrowseDetailsView(produc: item).navigationBarBackButtonHidden()
+            LTBrowseDetailsView(produc: item).navigationBarBackButtonHidden().environmentObject(self.dataCenter)
         } label: {
             VStack(alignment: .leading, spacing: adapter.setSize(size: 8)) {
                 
-                if !item.icon.contains("") {
+                if  item.icon != "" {
                     Image(item.icon)
                         .resizable()
                         .aspectRatio(contentMode: .fit)

@@ -29,18 +29,15 @@ public struct SpecificationsItem: Identifiable,Hashable {
 public struct LTBrowseDetailsView: View {
     
     @State var produc: ProducModel
-    @State var specifications: Array<SpecificationsItem>
+    @State private var specifications: Array<SpecificationsItem>
     @State var title = "详情"
- 
+    @EnvironmentObject private var dataCenter: LTBrowseDataCenter
     @Environment(\.presentationMode) var presentationMode
     public init(produc: ProducModel,specifications: [SpecificationsItem] = []) {
         self.produc = produc
       
-        if LTBrowseDataCenter.isUseSpecifications {
-            self.specifications =  LTBrowseDataCenter.getSpecifications()
-        }else {
-            self.specifications = specifications
-        }
+        let initialSpecifications = LTBrowseDataCenter.isUseSpecifications ?  LTBrowseDataCenter.getSpecifications() :  specifications
+        self._specifications = State(initialValue: initialSpecifications)
  
     }
     public var body: some View {
@@ -93,6 +90,11 @@ public struct LTBrowseDetailsView: View {
             presentationMode.wrappedValue.dismiss()
         })))
         .onAppear {
+        }
+        .onReceive(dataCenter.$specificationsData) { newValue in
+            if LTBrowseDataCenter.isUseSpecifications {
+                self.specifications = newValue
+            }
         }
     }
     

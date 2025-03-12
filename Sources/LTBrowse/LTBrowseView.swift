@@ -7,48 +7,42 @@
 
 import SwiftUI
 
-
-class LTBrowseViewModel: ObservableObject {
-    @Published var headIcon: String = ""
-}
+//@MainActor
+//public class LTBrowseViewModel: ObservableObject {
+//    @Published var vm_headIcons: [BrowseViewItem]?
+//    @Published var vm_menuList: [BrowseViewItem]?
+//    @Published var vm_contentList: [BrowseViewItem]?
+// 
+//}
 
 
 @available(iOS 14.0, *)
 public struct LTBrowseView: View {
     
-    @State var headIcons: [String]
-    @State var menuList: [BrowseViewItem]
-    @State var contentList: [BrowseViewItem]  
+    @StateObject  private var dataCenter = LTBrowseDataCenter.shared
+    
+    @State private var headIcons: [BrowseViewItem]
+    @State private var menuList: [BrowseViewItem]
+    @State private var contentList: [BrowseViewItem]
     
     var toggleCange:((String, Bool)->Void)? = nil
     var operateBlock: ((String)->Void)? = nil
     
-    //@StateObject var viewModel = LTBrowseViewModel()
+ 
     @State private var currentPage = 0
+ 
  
     private let adapter = LTScreenAdapter.shared
     
-    public init(headIcons: [String] = [], menus: [BrowseViewItem] = [], contents: [BrowseViewItem] = [], toggleCange: ((String, Bool)->Void)?, operateBlock: ((String)->Void)?) {
-        
-        if LTBrowseDataCenter.isUseHeadIcon {
-            self.headIcons =  LTBrowseDataCenter.getHeadIconData()
-        }else {
-            self.headIcons = headIcons
-        }
-        
-        if LTBrowseDataCenter.isUseMenuList {
-            self.menuList =  LTBrowseDataCenter.getMenuList()
-        }else {
-            self.menuList = menus
-        }
-        
-        
-        if LTBrowseDataCenter.isUseMenuList {
-            self.contentList =  LTBrowseDataCenter.getContentList()
-        }else {
-            self.contentList = contents
-        }
- 
+    public init(headIcons: [BrowseViewItem] = [], menus: [BrowseViewItem] = [], contents: [BrowseViewItem] = [], toggleCange: ((String, Bool)->Void)?, operateBlock: ((String)->Void)?) {
+       
+        let initialHeadIcons = LTBrowseDataCenter.isUseHeadIcon ?  LTBrowseDataCenter.getHeadIconData() :  headIcons
+        let initialMenuList = LTBrowseDataCenter.isUseMenuList ?  LTBrowseDataCenter.getMenuList() : menus
+        let  initialContentList = LTBrowseDataCenter.isUseMenuList ?  LTBrowseDataCenter.getContentList() :  contents
+    
+        self._headIcons = State(initialValue: initialHeadIcons)
+        self._menuList = State(initialValue: initialMenuList)
+        self._contentList = State(initialValue: initialContentList)
         self.toggleCange = toggleCange
         self.operateBlock = operateBlock
         
@@ -64,21 +58,21 @@ public struct LTBrowseView: View {
                             TabView(selection: $currentPage) {
                                 ForEach(0..<headIcons.count, id: \.self) { index in
                                     ZStack {
-                                        if let image = UIImage(named: headIcons[index]) {
+                                        if let image = UIImage(named: headIcons[index].icon) {
                                             Image(uiImage: image)
                                                 .resizable()
                                                 .scaledToFill()
                                         }
                                         
                                         Button {
-                                            
+                                            self.operateBlock?("HeadIcons\(index)")
                                         } label: {
                                             VStack {
-                                                Text("查看详情")
+                                                Text(headIcons[index].title) //查看详情
                                                     .font(.system(size: adapter.setFont(size: 16)))
                                                     .frame(width: adapter.getRelativeWidth(0.2),
                                                            height: adapter.setHeight(38))
-                                                    .foregroundColor(Color.white)
+                                                    .foregroundColor(headIcons[index].theme)
                                                     .overlay(
                                                         RoundedRectangle(cornerRadius: adapter.setSize(size: 3))
                                                             .stroke(style: StrokeStyle(lineWidth: 1, dash: [4, 2], dashPhase: 0))
@@ -120,7 +114,7 @@ public struct LTBrowseView: View {
  
                                     GeometryReader { itemGeometry in
                                         NavigationLink {
-                                            LTBrowseListView().navigationBarBackButtonHidden()
+                                            LTBrowseListView().navigationBarBackButtonHidden().environmentObject(self.dataCenter)
                                         } label: {
                                             Text(content.title)
                                                 .font(.system(size: adapter.setFont(size: 12)))
@@ -148,6 +142,21 @@ public struct LTBrowseView: View {
             .onAppear {
                   print("??\(LTScreenAdapter.SCRE_H) -----------\(LTScreenAdapter.SCRE_W)")
                
+            }
+            .onReceive(dataCenter.$headIconData) { newValue in
+                if  LTBrowseDataCenter.isUseHeadIcon   {
+                    self.headIcons = newValue
+                }
+            }
+            .onReceive(dataCenter.$menuListData) { newValue in
+                if  LTBrowseDataCenter.isUseMenuList {
+                    self.menuList = newValue
+                }
+            }
+            .onReceive(dataCenter.$contentListData) { newValue in
+                if LTBrowseDataCenter.isUseContentList {
+                    self.contentList = newValue
+                }
             }
         }.environment(\.locale, .init(identifier: currentLanguage()))
     }

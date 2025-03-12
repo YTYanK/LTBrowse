@@ -27,42 +27,108 @@ public struct BrowseViewItem: Hashable, Identifiable {
     }
 }
  
+
+@MainActor
+public enum LTBrowseTitlsKey {
+    case ListViewTitle
+    case DetailsViewTitle
+    case DetailsViewSpecifications
+        
+    var stringValue: String {
+        switch self {
+        case .ListViewTitle:
+            return "ListViewTitle"
+        case .DetailsViewTitle:
+            return "DetailsViewTitle"
+        case .DetailsViewSpecifications:
+            return "DetailsViewSpecifications"
+        }
+    }
+}
+
 /// 数据管理中心 -  ⚠️数据中心设置的数据等级最高
 @MainActor
-public class LTBrowseDataCenter: NSObject {
+public class LTBrowseDataCenter: ObservableObject {
     public static let shared = LTBrowseDataCenter()
+    
+    @Published var titls: [String:String] = ["ListViewTitle": "产品列表","DetailsViewTitle": "详情","DetailsViewSpecifications": "产品规格"]
     /// 首页走马灯列表
-    private var headIconData: [String] = []
+    @Published var headIconData: [BrowseViewItem] = []
     /// 首页菜单列表
-    private var menuListData:[BrowseViewItem] = []
+    @Published var menuListData:[BrowseViewItem] = []
     /// 首页内容列表
-    private var contentListData: [BrowseViewItem] = []
+    @Published var contentListData: [BrowseViewItem] = []
  
     /// 产品分类-选项卡
-    private var producTypes: [ProducType] = []
+    @Published var producTypes: [ProducType] = []
     /// 产品 - 内容
-    private var productsByCategoryData: [[ProducModel]] = []
+    @Published var productsByCategoryData: [[ProducModel]] = []
     
-    private var specificationsData: [SpecificationsItem] = []
-    override init() {
-        super.init()
-    }
+    @Published var specificationsData: [SpecificationsItem] = []
+    
+    
+    /// 判断是否使用首页走马灯列表
+    public static var isUseHeadIcon: Bool = false
+//    static var isUseHeadIcon: Bool {
+//        return !LTBrowseDataCenter.shared.headIconData.isEmpty
+//    }
+    /// 判断是否使用首页菜单列表
+    public static var isUseMenuList: Bool = false
+//    static var isUseMenuList: Bool {
+//        return !LTBrowseDataCenter.shared.menuListData.isEmpty
+//    }
+    /// 判断是否使用首页内容列表
+    public static var isUseContentList: Bool = false
+//    static var isUseContentList: Bool {
+//        return !LTBrowseDataCenter.shared.contentListData.isEmpty
+//    }
+    /// 判断是否使用产品类型下的分类数据
+    public static var isUseProductsByCategory: Bool = false
+//    static var isUseProductsByCategory: Bool {
+//        return !LTBrowseDataCenter.shared.productsByCategoryData.isEmpty
+//    }
+    /// 判断是否使用产品类型数据
+    public static var isUseProducTypes: Bool = false
+//    static var isUseProducTypes: Bool {
+//        return !LTBrowseDataCenter.shared.producTypes.isEmpty
+//    }
+    /// 判断是否使用规格数据
+    public static var isUseSpecifications: Bool = false
+//    static var isUseSpecifications: Bool {
+//        return !LTBrowseDataCenter.shared.specificationsData.isEmpty
+//    }
+  
+   
+    
+    
+    
+    private init() {  }
     
     // MARK: - Data Setters
+    
+    public func setTitles(_ key:LTBrowseTitlsKey, value: String) {
+          self.titls[key.stringValue] = value
+    }
+    
     /// 设置首页走马灯列表
     public func setHeadIcon(jsonString: String) {
         if let data = jsonString.data(using: .utf8) {
             do {
-                let decoded = try JSONDecoder().decode([String].self, from: data)
-                self.headIconData = decoded.map { String($0) }
+                let decoded = try JSONDecoder().decode([HeadIconItemDTO].self, from: data)
+                self.headIconData = decoded.map { $0.toBrowseViewItem() }
+                LTBrowseDataCenter.isUseHeadIcon = true
             } catch {
                 print("Error decoding menu list: \(error)")
             }
         }
     }
     public func setHeadIcon(_ data: Any) {
-        setData(data, type: String.self) { String($0) } completion: { [weak self] items in
+//        setData(data, type: String.self) { String($0) } completion: { [weak self] items in
+//            self?.headIconData = items
+//        }
+        setData(data, type: HeadIconItemDTO.self, transform: { $0.toBrowseViewItem() }) { [weak self] items in
             self?.headIconData = items
+            LTBrowseDataCenter.isUseHeadIcon = true
         }
     }
     
@@ -73,6 +139,8 @@ public class LTBrowseDataCenter: NSObject {
             do {
                 let decoded = try JSONDecoder().decode([MenuItemDTO].self, from: data)
                 self.menuListData = decoded.map { $0.toBrowseViewItem() }
+                LTBrowseDataCenter.isUseMenuList = true
+                
             } catch {
                 print("Error decoding menu list: \(error)")
             }
@@ -82,6 +150,7 @@ public class LTBrowseDataCenter: NSObject {
     public static func setMenuList(_ data: Any) {
         LTBrowseDataCenter.shared.setData(data, type: MenuItemDTO.self) { $0.toBrowseViewItem() } completion: { items in
             LTBrowseDataCenter.shared.menuListData = items
+            LTBrowseDataCenter.isUseMenuList = true
         }
 
     }
@@ -92,14 +161,17 @@ public class LTBrowseDataCenter: NSObject {
             do {
                 let decoded = try JSONDecoder().decode([ContentItemDTO].self, from: data)
                 self.contentListData = decoded.map { $0.toBrowseViewItem() }
+                LTBrowseDataCenter.isUseContentList = true
             } catch {
                 print("Error decoding content list: \(error)")
+                LTBrowseDataCenter.isUseContentList = false
             }
         }
     }
     public func setContentList(_ data: Any) {
         setData(data, type: ContentItemDTO.self, transform: { $0.toBrowseViewItem() }) { [weak self] items in
             self?.contentListData = items
+            LTBrowseDataCenter.isUseContentList = true
         }
     }
     
@@ -110,8 +182,10 @@ public class LTBrowseDataCenter: NSObject {
             do {
                 let decoded = try JSONDecoder().decode([ProductCategoryDTO].self, from: data)
                 self.productsByCategoryData = decoded.map { $0.toProducModels() }
+                LTBrowseDataCenter.isUseProductsByCategory = true
             } catch {
                 print("Error decoding product categories: \(error)")
+                LTBrowseDataCenter.isUseProductsByCategory = false
             }
         }
     }
@@ -119,6 +193,7 @@ public class LTBrowseDataCenter: NSObject {
         setData(data, type: ProductCategoryDTO.self) { $0.toProducModels()
         } completion: { [weak self] items in
             self?.productsByCategoryData = items
+            LTBrowseDataCenter.isUseProductsByCategory = true
         }
 
     }
@@ -129,14 +204,17 @@ public class LTBrowseDataCenter: NSObject {
             do {
                 let decoded = try JSONDecoder().decode([TabItemDTO].self, from: data)
                 self.producTypes = decoded.map { $0.toProducType() }
+                LTBrowseDataCenter.isUseProducTypes = true
             } catch {
                 print("Error decoding tab items: \(error)")
+                LTBrowseDataCenter.isUseProducTypes = false
             }
         }
     }
     public func setProducTyes(_ data: Any) {
         setData(data, type: TabItemDTO.self, transform: { $0.toProducType()}) { [weak self] items in
             self?.producTypes = items
+            LTBrowseDataCenter.isUseProducTypes = true
         }
     }
     
@@ -146,14 +224,17 @@ public class LTBrowseDataCenter: NSObject {
             do {
                 let decoded = try JSONDecoder().decode([SpecificationDTO].self, from: data)
                 self.specificationsData = decoded.map { $0.toSpecificationsItem() }
+                LTBrowseDataCenter.isUseSpecifications = true
             } catch {
                 print("Error decoding specifications: \(error)")
+                LTBrowseDataCenter.isUseSpecifications = false
             }
         }
     }
     public  func setSpecifications(_ data: Any) {
         setData(data, type: SpecificationDTO.self, transform: { $0.toSpecificationsItem() }) { [weak self] items in
             self?.specificationsData = items
+            LTBrowseDataCenter.isUseSpecifications = true
         }
     }
     
@@ -217,61 +298,53 @@ public class LTBrowseDataCenter: NSObject {
 
     // MARK: - Data Getters
     /// 获取首页走马灯列表
-    public static func getHeadIconData() -> [String]  {
-        return LTBrowseDataCenter.shared.headIconData
+    public static func getHeadIconData() -> [BrowseViewItem]  {
+        return shared.headIconData
     }
     /// 获取首页菜单列表
     public static func getMenuList() -> [BrowseViewItem] {
-        return LTBrowseDataCenter.shared.menuListData
+        return shared.menuListData
     }
     /// 获取首页内容列表
     public static func getContentList() -> [BrowseViewItem] {
-        return LTBrowseDataCenter.shared.contentListData
+        return shared.contentListData
     }
     /// 获取产品类型下的分类数据
     public static func getProductsByCategory() -> [[ProducModel]] {
-        return LTBrowseDataCenter.shared.productsByCategoryData
+        return shared.productsByCategoryData
     }
     /// 获取产品类型数据
     public static func getProducTypes() -> [ProducType] {
-        return LTBrowseDataCenter.shared.producTypes
+        return shared.producTypes
     }
     /// 获取规格数据
     public static func getSpecifications() -> [SpecificationsItem] {
-        return LTBrowseDataCenter.shared.specificationsData
+        return shared.specificationsData
     }
     
  
     
-    /// 判断是否使用首页走马灯列表
-    static var isUseHeadIcon: Bool {
-        return !LTBrowseDataCenter.shared.headIconData.isEmpty
-    }
-    /// 判断是否使用首页菜单列表
-    static var isUseMenuList: Bool {
-        return !LTBrowseDataCenter.shared.menuListData.isEmpty
-    }
-    /// 判断是否使用首页内容列表
-    static var isUseContentList: Bool {
-        return !LTBrowseDataCenter.shared.contentListData.isEmpty
-    }
-    /// 判断是否使用产品类型下的分类数据
-    static var isUseProductsByCategory: Bool {
-        return !LTBrowseDataCenter.shared.productsByCategoryData.isEmpty
-    }
-    /// 判断是否使用产品类型数据
-    static var isUseProducTypes: Bool {
-        return !LTBrowseDataCenter.shared.producTypes.isEmpty
-    }
-    /// 判断是否使用规格数据
-    static var isUseSpecifications: Bool {
-        return !LTBrowseDataCenter.shared.specificationsData.isEmpty
-    }
+ 
 
 }
 
 
 // MARK: - DTO Models
+private struct HeadIconItemDTO: Codable {
+    let title: String
+    let icon: String
+    let themeColor: ColorDTO?
+    
+    func toBrowseViewItem() -> BrowseViewItem {
+        return BrowseViewItem(
+            title: title,
+            icon: icon,
+            theme: themeColor?.toColor() ?? .white
+        )
+    }
+}
+
+
 private struct MenuItemDTO: Codable {
     let title: String
     let icon: String
