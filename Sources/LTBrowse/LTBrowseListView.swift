@@ -92,14 +92,6 @@ public struct LTBrowseListView: View {
     let _size = LTB_SCRE_W * 0.9
     public  var body: some View {
 
- /*
-  tabBarController?.navigationItem.leftBarButtonItem = UIBarButtonItem(image: UIImage(named: imageString), style: .plain, target: self, action: #selector(self.leftClick))
-  tabBarController?.navigationItem.leftBarButtonItem?.tintColor = .lt_AEAEAE
-}else {
-  navigationItem.leftBarButtonItem = UIBarButtonItem(image: UIImage(named: imageString), style: .plain, target: self, action: #selector(self.leftClick))
-  navigationItem.leftBarButtonItem?.tintColor = .lt_AEAEAE
-  */
-        
             GeometryReader { geometry in
                 VStack(spacing: 5)  {
                     

@@ -30,7 +30,6 @@ public struct LTBrowseDetailsView: View {
     
     @State var produc: ProducModel
     @State private var specifications: Array<SpecificationsItem>
-    @State var title = "详情"
     @EnvironmentObject private var dataCenter: LTBrowseDataCenter
     @Environment(\.presentationMode) var presentationMode
     
@@ -87,10 +86,19 @@ public struct LTBrowseDetailsView: View {
  
         }
         .background(LTB_BG_Color.edgesIgnoringSafeArea(.all))
-        .navigationTitle(Text(dataCenter.titls["DetailsViewTitle"]!))
-        .navigationBarItems(leading:  AnyView(UIView.returnNavLeftView(icon:"back_black",width: adapter.setSize(size: 12.5), height: adapter.setSize(size: 23) ,{
+        .toolbar {
+               ToolbarItem(placement: .principal) {
+                   Text(dataCenter.titls["DetailsViewTitle"]!)
+                       .foregroundColor(.black)  // 设置标题颜色
+               }
+           }
+        .navigationBarItems(leading:  AnyView(UIView.returnNavLeftView(icon:"back_arrow",width: adapter.setSize(size: 18), height: adapter.setSize(size: 18) ,{
             presentationMode.wrappedValue.dismiss()
         })))
+//        .navigationTitle(Text(dataCenter.titls["DetailsViewTitle"]!))
+//        .navigationBarItems(leading:  AnyView(UIView.returnNavLeftView(icon:"back_black",width: adapter.setSize(size: 12.5), height: adapter.setSize(size: 23) ,{
+//            presentationMode.wrappedValue.dismiss()
+//        })))
         .onAppear {
         }
         .onReceive(dataCenter.$specificationsData) { newValue in
