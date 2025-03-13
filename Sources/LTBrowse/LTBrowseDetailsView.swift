@@ -42,8 +42,9 @@ public struct LTBrowseDetailsView: View {
  
     }
     public var body: some View {
-        ScrollView(.vertical, showsIndicators: false) {
-          
+       
+        VStack {
+            // 大图
             VStack(alignment: .leading) {
                 
                 if let image = UIImage(named: produc.icon) {
@@ -61,44 +62,43 @@ public struct LTBrowseDetailsView: View {
             .background(Color.white)
             .cornerRadius(12)
             .shadow(radius: 1)
+            
+            /// 标题
             Text(produc.name).frame(width: LTB_SCRE_W * 0.8).multilineTextAlignment(.center)
+            
+            ScrollView(.vertical, showsIndicators: false) {
  
-            VStack(spacing: 2) {
-                HStack {
-                    Text(dataCenter.titls["DetailsViewSpecifications"]!).font(.system(size: 18, weight: .medium))
-                    Spacer()
-                }.padding([.horizontal],20)
-                    .padding(.top, 44)
-               
-                VStack {
+                VStack(spacing: 2) {
+                    HStack {
+                        Text(dataCenter.titls["DetailsViewSpecifications"]!).font(.system(size: 18, weight: .medium))
+                        Spacer()
+                    }.padding([.horizontal],20)
+                        .padding(.top, 44)
                    
-                    ForEach(specifications) {  item  in
-                       setCell(item: item)
+                    VStack {
+                        ForEach(specifications) {  item  in
+                           setCell(item: item)
+                        }
                     }
+                    .padding(.vertical, 10)
+                    .frame(width: LTB_SCRE_W * 0.9)
+                    .background(Color.white)
+                    .cornerRadius(12.0)
+                    .padding(.vertical,10)
                 }
-                .padding(.vertical, 10)
-                .frame(width: LTB_SCRE_W * 0.9)
-                .background(Color.white)
-                .cornerRadius(12.0)
-                .padding(.vertical,10)
+     
             }
-
- 
         }
         .background(LTB_BG_Color.edgesIgnoringSafeArea(.all))
         .toolbar {
                ToolbarItem(placement: .principal) {
                    Text(dataCenter.titls["DetailsViewTitle"]!)
-                       .foregroundColor(.black)  // 设置标题颜色
+                       .foregroundColor(.black).font(.system(size: 17, weight: .bold))  // 设置标题颜色
                }
            }
         .navigationBarItems(leading:  AnyView(UIView.returnNavLeftView(icon:"back_arrow",width: adapter.setSize(size: 18), height: adapter.setSize(size: 18) ,{
             presentationMode.wrappedValue.dismiss()
         })))
-//        .navigationTitle(Text(dataCenter.titls["DetailsViewTitle"]!))
-//        .navigationBarItems(leading:  AnyView(UIView.returnNavLeftView(icon:"back_black",width: adapter.setSize(size: 12.5), height: adapter.setSize(size: 23) ,{
-//            presentationMode.wrappedValue.dismiss()
-//        })))
         .onAppear {
         }
         .onReceive(dataCenter.$specificationsData) { newValue in

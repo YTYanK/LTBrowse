@@ -488,11 +488,10 @@ extension UIView {
                             .scaledToFit()
                             .tint(.blue)
                     } else {
-                        Image(icon).resizable().frame(width: width, height: height) //38, height: 69
+                        Image(icon).resizable().frame(width: width, height: height)
                             .scaledToFit()
                             .foregroundColor(.red)
-                    } //
-//                    Text("返回")
+                    }
                 }
             }
         }

@@ -28,7 +28,7 @@ public struct LTBrowseView: View {
     var toggleCange:((String, Bool)->Void)? = nil
     var operateBlock: ((String)->Void)? = nil
     
- 
+    @State private var isGotoList: Bool = false
     @State private var currentPage = 0
  
  
@@ -52,6 +52,9 @@ public struct LTBrowseView: View {
  
 //        NavigationView {
             ZStack {
+                NavigationLink("_", isActive: $isGotoList) {
+                    LTBrowseListView().navigationBarBackButtonHidden().environmentObject(self.dataCenter)
+                }.hidden()
                 GeometryReader { geometry in
                     ScrollView(.vertical, showsIndicators: false) {
                         VStack {
@@ -65,6 +68,7 @@ public struct LTBrowseView: View {
                                         }
                                         
                                         Button {
+                                            self.isGotoList = true
                                             self.operateBlock?("HeadIcons\(index)")
                                         } label: {
                                             VStack {
@@ -89,11 +93,10 @@ public struct LTBrowseView: View {
                             HStack {
                                 ForEach(menuList, id: \.self) { menu in
                                     Button {
-                                        
+                                        self.isGotoList = true
                                     } label: {
                                         VStack {
-                                            
-                                            if  menu.icon != "" {
+                                           if  menu.icon != "" {
                                                 Image(menu.icon)
                                                     .resizable()
                                                     .scaledToFit()
@@ -117,38 +120,44 @@ public struct LTBrowseView: View {
                             }.padding(.vertical,adapter.setHeight(10))
                             
                             ForEach(self.contentList, id: \.self) { content in
-                                ZStack {
-                                    Image(content.icon)
-                                        .resizable()
-                                        .scaledToFill()
-                                        .frame(width: adapter.getRelativeWidth(0.9))
  
-                                    GeometryReader { itemGeometry in
-                                        NavigationLink {
-                                            LTBrowseListView().navigationBarBackButtonHidden().environmentObject(self.dataCenter)
-                                        } label: {
-                                            Text(content.title)
-                                                .font(.system(size: adapter.setFont(size: 12)))
-                                                .frame(width: adapter.getRelativeWidth(0.2),
-                                                       height: adapter.setHeight(24))
-                                                .foregroundColor(content.theme)
-                                                .overlay(
-                                                    RoundedRectangle(cornerRadius: adapter.setSize(size: 1))
-                                                        .stroke(style: StrokeStyle(lineWidth: 1, dash: [4, 2], dashPhase: 0))
-                                                        .foregroundColor(Color.white)
-                                                )
+                                NavigationLink {
+                                    LTBrowseListView().navigationBarBackButtonHidden().environmentObject(self.dataCenter)
+                                } label: {
+                                    ZStack {
+                                        Image(content.icon)
+                                            .resizable()
+                                            .scaledToFill()
+                                            .frame(width: adapter.getRelativeWidth(0.9))
+     
+                                        GeometryReader { itemGeometry in
+                                                Text(content.title)
+                                                    .font(.system(size: adapter.setFont(size: 12)))
+                                                    .frame(width: adapter.getRelativeWidth(0.2),
+                                                           height: adapter.setHeight(24))
+                                                    .foregroundColor(content.theme)
+                                                    .overlay(
+                                                        RoundedRectangle(cornerRadius: adapter.setSize(size: 1))
+                                                            .stroke(style: StrokeStyle(lineWidth: 1, dash: [4, 2], dashPhase: 0))
+                                                            .foregroundColor(content.theme)
+                                                    )
+                                                    .offset(x: adapter.getRelativeWidth(0.1),
+                                                    y: itemGeometry.size.height - adapter.setHeight(48))
                                         }
-                                        .offset(x: adapter.getRelativeWidth(0.1),
-                                                y: itemGeometry.size.height - adapter.setHeight(48))
                                     }
                                 }
+                                
                             }
                             
                             Spacer()
                         }
                     }
                 }
+               
+               
+ 
             }
+            .navigationBarHidden(true)
             .edgesIgnoringSafeArea(.all)
             .onAppear {
                   print("??\(LTScreenAdapter.SCRE_H) -----------\(LTScreenAdapter.SCRE_W)")
@@ -183,3 +192,29 @@ public struct LTBrowseView: View {
 }
  
  
+public struct ConditionalNavigationLink<Destination: View>: View {
+   // let destination: Destination
+    @State var condition: Bool
+    let destination: () -> Destination
+    let label: () -> Text
+    
+//    @ViewBuilder destination: () -> Destination, @ViewBuilder label: () -> Label
+    
+    
+    public var body: some View {
+        Group {
+            if condition {
+                NavigationLink(destination: destination()) {
+                    label()
+                }
+            } else {
+                Button {
+                    
+                } label: {
+                    label()
+                }
+ 
+            }
+        }
+    }
+}

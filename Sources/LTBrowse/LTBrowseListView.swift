@@ -150,29 +150,25 @@ public struct LTBrowseListView: View {
 //        }
         .background(LTB_BG_Color.edgesIgnoringSafeArea(.all))
         .navigationBarHidden(false)
-       // .navigationTitle(dataCenter.titls["ListViewTitle"]!)
         .toolbar {
                ToolbarItem(placement: .principal) {
                    Text(dataCenter.titls["ListViewTitle"]!)
-                       .foregroundColor(.black)  // 设置标题颜色
+                       .foregroundColor(.black).font(.system(size: 17, weight: .bold))  // 设置标题颜色
                }
            }
         .navigationBarItems(leading:  AnyView(UIView.returnNavLeftView(icon:"back_arrow",width: adapter.setSize(size: 18), height: adapter.setSize(size: 18) ,{
             presentationMode.wrappedValue.dismiss()
         })))
- 
         .onAppear {
  
         }
         .onReceive(dataCenter.$producTypes) { newValue in
             if  LTBrowseDataCenter.isUseProducTypes {
-//                self.tabItems = newValue
                 self.setupProductData(newValue, nil)
             }
         }
         .onReceive(dataCenter.$productsByCategoryData) { newValue in
             if LTBrowseDataCenter.isUseProductsByCategory {
-//                self.productsByCategory = newValue
                 self.setupProductData(nil, newValue)
             }
         }
@@ -265,6 +261,7 @@ private struct ProductItemView: View {
     @EnvironmentObject private var dataCenter: LTBrowseDataCenter
     var body: some View {
         NavigationLink {
+         
             LTBrowseDetailsView(produc: item).navigationBarBackButtonHidden().environmentObject(self.dataCenter)
         } label: {
             VStack(alignment: .leading, spacing: adapter.setSize(size: 8)) {
