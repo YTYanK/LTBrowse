@@ -11,11 +11,14 @@ import SwiftUI
 //Product specifications
 public struct SpecificationsItem: Identifiable,Hashable {
     public var id = UUID()
+    // 标记ID
+    var tId: Int
     /// 标题
     var title: String
     /// 描述
     var des: String = ""
-    public init(title: String, des: String = "") {
+    public init(_ tID: Int = 0, title: String, des: String = "") {
+        self.tId = tID
         self.title = title
         self.des = des
     }

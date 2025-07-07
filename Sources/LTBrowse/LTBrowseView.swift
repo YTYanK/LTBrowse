@@ -6,7 +6,7 @@
 //
 
 import SwiftUI
-
+import Kingfisher
 //@MainActor
 //public class LTBrowseViewModel: ObservableObject {
 //    @Published var vm_headIcons: [BrowseViewItem]?
@@ -50,112 +50,65 @@ public struct LTBrowseView: View {
     
     public var body: some View {
  
-//        NavigationView {
+//        NavigationView { }.environment(\.locale, .init(identifier: currentLanguage()))
             ZStack {
                 NavigationLink("_", isActive: $isGotoList) {
                     LTBrowseListView().navigationBarBackButtonHidden().environmentObject(self.dataCenter)
                 }.hidden()
                 GeometryReader { geometry in
                     ScrollView(.vertical, showsIndicators: false) {
+                        // 首页- bann
                         VStack {
                             TabView(selection: $currentPage) {
-                                ForEach(0..<headIcons.count, id: \.self) { index in
-                                    ZStack {
-                                        if let image = UIImage(named: headIcons[index].icon) {
-                                            Image(uiImage: image)
-                                                .resizable()
-                                                .scaledToFill()
-                                        }
-                                        
-                                        Button {
-                                            self.isGotoList = true
-                                            self.operateBlock?("HeadIcons\(index)")
-                                        } label: {
-                                            VStack {
-                                                Text(headIcons[index].title) //查看详情
-                                                    .font(.system(size: adapter.setFont(size: 16)))
-                                                    .frame(width: adapter.getRelativeWidth(0.2),
-                                                           height: adapter.setHeight(38))
-                                                    .foregroundColor(headIcons[index].theme)
-                                                    .overlay(
-                                                        RoundedRectangle(cornerRadius: adapter.setSize(size: 3))
-                                                            .stroke(style: StrokeStyle(lineWidth: 1, dash: [4, 2], dashPhase: 0))
-                                                            .foregroundColor(Color.white)
-                                                    )
-                                            }
-                                        }.offset(y: adapter.getRelativeHeight(0.14) - adapter.setHeight(38))
+                                ForEach(headIcons, id: \.self) { head in
+                                    LTImageView(tag: "headIcons", icon: head.icon, pId: head.pId) { curId, curTag in
+                                        self.operateBlock?("\(curTag)-\(curId)")
                                     }
                                 }
-                            }
-                            .frame(height: adapter.getRelativeHeight(0.34))
-                            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
-                            
-                            HStack {
-                                ForEach(menuList, id: \.self) { menu in
-                                    Button {
-                                        self.isGotoList = true
-                                    } label: {
-                                        VStack {
-                                           if  menu.icon != "" {
-                                                Image(menu.icon)
-                                                    .resizable()
-                                                    .scaledToFit()
-                                                    .frame(width: adapter.setWidth(68),
-                                                          height: adapter.setWidth(68))
-                                           } else {
-                                               // 显示默认图片或占位符
-                                               Rectangle()
-                                                   .fill(Color.gray.opacity(0.2))
-                                                   .frame(width: adapter.setWidth(68),
-                                                         height: adapter.setWidth(68))
-                                                   .cornerRadius(adapter.setSize(size: 10))
-                                           }
-                                            
-                                            Text(menu.title)
-                                                .font(.system(size: adapter.setFont(size: 13), weight: .medium))
-                                                .foregroundColor(menu.theme)
-                                        }.padding(adapter.setSize(size: 6))
-                                    }
-                                }
-                            }.padding(.vertical,adapter.setHeight(10))
-                            
-                            ForEach(self.contentList, id: \.self) { content in
  
-                                NavigationLink {
-                                    LTBrowseListView().navigationBarBackButtonHidden().environmentObject(self.dataCenter)
-                                } label: {
-                                    ZStack {
-                                        Image(content.icon)
-                                            .resizable()
-                                            .scaledToFill()
-                                            .frame(width: adapter.getRelativeWidth(0.9))
-     
-                                        GeometryReader { itemGeometry in
-                                                Text(content.title)
-                                                    .font(.system(size: adapter.setFont(size: 12)))
-                                                    .frame(width: adapter.getRelativeWidth(0.2),
-                                                           height: adapter.setHeight(24))
-                                                    .foregroundColor(content.theme)
-                                                    .overlay(
-                                                        RoundedRectangle(cornerRadius: adapter.setSize(size: 1))
-                                                            .stroke(style: StrokeStyle(lineWidth: 1, dash: [4, 2], dashPhase: 0))
-                                                            .foregroundColor(content.theme)
-                                                    )
-                                                    .offset(x: adapter.getRelativeWidth(0.1),
-                                                    y: itemGeometry.size.height - adapter.setHeight(48))
-                                        }
-                                    }
-                                }
-                                
-                            }
-                            
-                            Spacer()
+                             }
                         }
-                    }
-                }
-               
-               
+                        .frame(height: adapter.getRelativeHeight(0.34))
+                        .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
  
+                        // 首页-菜单
+                        HStack {
+                            ForEach(menuList, id: \.self) { menu in
+                               VStack {
+                                        LTImageView(tag: "MenuIcons", icon: menu.icon, pId: menu.pId, operateBlock: { curId, curTag in
+                                            self.isGotoList = true
+                                            self.operateBlock?("\(curTag)-\(curId)")
+                                        })
+                                        .background(Color.red)
+                                        .frame(width: adapter.setWidth(68), height: adapter.setWidth(68))
+
+                                        Text(menu.title)
+                                            .font(.system(size: adapter.setFont(size: 13), weight: .medium))
+                                            .foregroundColor(menu.theme)
+                                            .onTapGesture {
+                                                self.isGotoList = true
+                                                self.operateBlock?("MenuIcons-\(menu.pId)")
+                                            }
+                                    }.padding(adapter.setSize(size: 6))
+                            }
+                        }.padding(.vertical,adapter.setHeight(10))
+ 
+                        // 首页-列表
+                        ForEach(contentList, id: \.self) { content in
+
+//                            NavigationLink {
+//                                LTBrowseListView().navigationBarBackButtonHidden().environmentObject(self.dataCenter)
+//                            } label: {
+                                
+                            LTImageView(tag: "ContentIcons", icon: content.icon, pId: content.pId, operateBlock: { curId, curTag in
+                                self.operateBlock?("\(curTag)-\(curId)")
+                            }).frame(width: adapter.getRelativeWidth(0.9))
+ 
+                        }
+                        
+                        Spacer()
+                  }
+               }
             }
             .navigationBarHidden(true)
             .edgesIgnoringSafeArea(.all)
@@ -178,8 +131,10 @@ public struct LTBrowseView: View {
                     self.contentList = newValue
                 }
             }
-//        }.environment(\.locale, .init(identifier: currentLanguage()))
+
     }
+    
+ 
     
     
     func currentLanguage() -> String {
@@ -215,6 +170,47 @@ public struct ConditionalNavigationLink<Destination: View>: View {
                 }
  
             }
+        }
+    }
+}
+
+
+public struct LTImageView: View {
+    
+    let adapter = LTScreenAdapter.shared
+    /// 字符串 标签
+    @State var tag: String
+    @State var icon: String = ""
+    @State var pId: Int = 0
+    var operateBlock: ((Int,String)->Void)? = nil
+    public var body: some View {
+        if let imageIcon = UIImage(named: icon) {
+            Image(uiImage: imageIcon)
+                .resizable()
+                .scaledToFill()
+                .tag(pId)
+                .onTapGesture {
+                    self.operateBlock?(pId,tag)
+                }
+        }else if let urlIcon = URL(string: icon) {
+            KFImage(urlIcon)
+                .resizable()
+                .scaledToFill()
+                .tag(pId)
+                .onTapGesture {
+                    self.operateBlock?(pId,tag)
+                }
+        }else {
+            // 显示默认图片或占位符
+            Rectangle()
+                .fill(Color.gray.opacity(0.2))
+                .frame(width: adapter.setWidth(68),
+                      height: adapter.setWidth(68))
+                .cornerRadius(adapter.setSize(size: 10))
+                .tag(pId)
+                .onTapGesture {
+                    self.operateBlock?(pId,tag)
+                }
         }
     }
 }

@@ -1,8 +1,10 @@
 // The Swift Programming Language
 // https://docs.swift.org/swift-book
 // ⚠️数据中心设置的数据等级最高
-
+//#if canImport(UIKit)
 import UIKit
+//#endif
+
 import SwiftUI
  
 @MainActor
@@ -13,17 +15,36 @@ let LTB_SCRE_W = UIScreen.main.bounds.width
 // 背景颜色
 let LTB_BG_Color = Color(UIColor(red: 242/255, green: 242/255, blue: 242/255, alpha: 1))
 
+// 解析错误类型
+enum ParseError: Error, LocalizedError {
+    case invalidJSONString
+    case typeMismatch
+    case invalidInputType
+    
+    var errorDescription: String? {
+        switch self {
+        case .invalidJSONString: return "无效的JSON字符串"
+        case .typeMismatch: return "类型不匹配"
+        case .invalidInputType: return "无效的输入类型"
+        }
+    }
+}
+
 /// 展示模型
 public struct BrowseViewItem: Hashable, Identifiable {
     public var id = UUID()
+    var pId: Int = 0
     var title: String
     var icon: String
     var theme: Color = .white
- 
-    public init(title: String, icon: String, theme: Color = .white) {
+    /// 额外补充的值（建议是Json 字符串）
+    var carrying: String = ""
+    public init(pId: Int = 0,title: String, icon: String, theme: Color = .white, _ carrying: String = "") {
+        self.pId = pId
         self.title = title
         self.icon = icon
         self.theme = theme
+        self.carrying = carrying
     }
 }
  
@@ -66,38 +87,27 @@ public class LTBrowseDataCenter: ObservableObject {
     
     @Published var specificationsData: [SpecificationsItem] = []
     
+//    @Published
+    
     
     /// 判断是否使用首页走马灯列表
     public static var isUseHeadIcon: Bool = false
-//    static var isUseHeadIcon: Bool {
-//        return !LTBrowseDataCenter.shared.headIconData.isEmpty
-//    }
+ 
     /// 判断是否使用首页菜单列表
     public static var isUseMenuList: Bool = false
-//    static var isUseMenuList: Bool {
-//        return !LTBrowseDataCenter.shared.menuListData.isEmpty
-//    }
+ 
     /// 判断是否使用首页内容列表
     public static var isUseContentList: Bool = false
-//    static var isUseContentList: Bool {
-//        return !LTBrowseDataCenter.shared.contentListData.isEmpty
-//    }
+ 
     /// 判断是否使用产品类型下的分类数据
     public static var isUseProductsByCategory: Bool = false
-//    static var isUseProductsByCategory: Bool {
-//        return !LTBrowseDataCenter.shared.productsByCategoryData.isEmpty
-//    }
+ 
     /// 判断是否使用产品类型数据
     public static var isUseProducTypes: Bool = false
-//    static var isUseProducTypes: Bool {
-//        return !LTBrowseDataCenter.shared.producTypes.isEmpty
-//    }
+ 
     /// 判断是否使用规格数据
     public static var isUseSpecifications: Bool = false
-//    static var isUseSpecifications: Bool {
-//        return !LTBrowseDataCenter.shared.specificationsData.isEmpty
-//    }
-  
+ 
    
     
     
@@ -105,16 +115,17 @@ public class LTBrowseDataCenter: ObservableObject {
     private init() {  }
     
     // MARK: - Data Setters
-    
+    /// 设置页面标题
     public func setTitles(_ key:LTBrowseTitlsKey, value: String) {
           self.titls[key.stringValue] = value
     }
     
+    
     /// 设置首页走马灯列表
-    public func setHeadIcon(jsonString: String) {
+    public func setHeadIcon(jsonString: String) { // HeadIconItemDTO  -》 FirstBannerList
         if let data = jsonString.data(using: .utf8) {
             do {
-                let decoded = try JSONDecoder().decode([HeadIconItemDTO].self, from: data)
+                let decoded = try JSONDecoder().decode([FirstBannerList].self, from: data)
                 self.headIconData = decoded.map { $0.toBrowseViewItem() }
                 LTBrowseDataCenter.isUseHeadIcon = true
             } catch {
@@ -123,17 +134,25 @@ public class LTBrowseDataCenter: ObservableObject {
         }
     }
     public func setHeadIcon(_ data: Any) {
-//        setData(data, type: String.self) { String($0) } completion: { [weak self] items in
+//        setData(data, type: FirstBannerList.self, transform: { $0.toBrowseViewItem() }) { [weak self] items, str in
 //            self?.headIconData = items
+//            LTBrowseDataCenter.isUseHeadIcon = true
 //        }
-        setData(data, type: HeadIconItemDTO.self, transform: { $0.toBrowseViewItem() }) { [weak self] items in
-            self?.headIconData = items
-            LTBrowseDataCenter.isUseHeadIcon = true
+        
+         setData(data, type: FirstBannerList.self) { $0.toBrowseViewItem() } completion: { result  in
+            switch result {
+            case .success(let items):
+                LTBrowseDataCenter.shared.headIconData = items
+                LTBrowseDataCenter.isUseHeadIcon = true
+            case .failure(let err):
+                print("Error decoding content list: \(err)")
+                LTBrowseDataCenter.isUseHeadIcon = false
+            }
         }
+        
     }
     
-
-    /// 设置首页菜单数据
+    /// json字符串设置 - 首页菜单数据
     public func setMenuList(jsonString: String) {
         if let data = jsonString.data(using: .utf8) {
             do {
@@ -146,11 +165,38 @@ public class LTBrowseDataCenter: ObservableObject {
             }
         }
     }
-    /// 设置首页菜单数据
+ 
+    /**
+     设置首页菜单数据
+     例子：
+     let menuJson = """
+     [
+         {
+             "title": "ROAD公路",
+             "icon": "icon1",
+             "themeColor": {
+                 "red": 0.0,
+                 "green": 0.0,
+                 "blue": 0.0,
+                 "alpha": 1.0
+             }
+         }
+     ]
+     """
+     let menuData = menuJson.data(using: .utf8)
+     LTBrowseDataCenter.setMenuList(menuData as Any)
+     */
     public static func setMenuList(_ data: Any) {
-        LTBrowseDataCenter.shared.setData(data, type: MenuItemDTO.self) { $0.toBrowseViewItem() } completion: { items in
-            LTBrowseDataCenter.shared.menuListData = items
-            LTBrowseDataCenter.isUseMenuList = true
+ 
+        LTBrowseDataCenter.shared.setData(data, type: FirstBannerList.self) { $0.toBrowseViewItem() } completion: { result  in
+            switch result {
+            case .success(let items):
+                LTBrowseDataCenter.shared.menuListData = items
+                LTBrowseDataCenter.isUseMenuList = true
+            case .failure(let err):
+                print("Error decoding content list: \(err)")
+                LTBrowseDataCenter.isUseMenuList = false
+            }
         }
 
     }
@@ -158,8 +204,8 @@ public class LTBrowseDataCenter: ObservableObject {
     /// 设置首页内容列表数据
     public func setContentList(jsonString: String) {
         if let data = jsonString.data(using: .utf8) {
-            do {
-                let decoded = try JSONDecoder().decode([ContentItemDTO].self, from: data)
+            do { //FirstBannerList -》 FirstBannerList
+                let decoded = try JSONDecoder().decode([FirstBannerList].self, from: data)
                 self.contentListData = decoded.map { $0.toBrowseViewItem() }
                 LTBrowseDataCenter.isUseContentList = true
             } catch {
@@ -169,11 +215,61 @@ public class LTBrowseDataCenter: ObservableObject {
         }
     }
     public func setContentList(_ data: Any) {
-        setData(data, type: ContentItemDTO.self, transform: { $0.toBrowseViewItem() }) { [weak self] items in
-            self?.contentListData = items
-            LTBrowseDataCenter.isUseContentList = true
+//        setData(data, type: FirstBannerList.self, transform: { $0.toBrowseViewItem() }) { [weak self] items, str in
+//            self?.contentListData = items
+//            LTBrowseDataCenter.isUseContentList = true
+//        }
+        setData(data, type: FirstBannerList.self) { $0.toBrowseViewItem() } completion: { result  in
+            switch result {
+            case .success(let items):
+                self.contentListData = items
+                LTBrowseDataCenter.isUseContentList = true
+            case .failure(let err):
+                print("Error decoding content list: \(err)")
+                LTBrowseDataCenter.isUseContentList = false
+            }
         }
+
     }
+    
+    
+    /// 一次性加载首页数据设置
+    public func setHompageData(json: String) { // -> HomepageModel
+        LTBrowseDataCenter.shared.setData(json, type: HomepageModel.self, transform: { homepageModel in
+            // homepageModel 再转换
+//               let firstBannerItems = homepageModel.firstBannerList.map { $0.toBrowseViewItem() }
+//            let result = homepageModel.toTransformedModel (
+//                        transform: { banner in transform(banner as! T) },
+//                        categoryTransform: { category in transform(category as! T) }
+//                    )
+            
+//            let firstBannerItems = homepageModel.firstBannerList .map(transform)
+//            let secondBannerItems = secondBannerList.map(transform)
+//             let categoryItems = categoryList.map(categoryTransform)
+            
+            print("参考====\(homepageModel)")
+            return homepageModel
+        }, completion: { result  in
+            switch result {
+            case .success((let items)):
+                
+               self.headIconData = items[0].firstBannerList.map { $0.toBrowseViewItem() }
+               self.menuListData = items[0].categoryList.map {$0.toBrowseViewItem() }
+               self.contentListData = items[0].secondBannerList.map { $0.toBrowseViewItem() }
+               LTBrowseDataCenter.isUseHeadIcon = true
+                LTBrowseDataCenter.isUseMenuList = true
+                LTBrowseDataCenter.isUseContentList = true
+                
+              // 更新数据中心
+              print("首页数据解析  : \(items)")
+            case .failure(let error):
+                print("首页数据解析失败: \(error.localizedDescription)")
+                
+            }
+        })
+    }
+    /// ----以上是首页部分
+    
     
     
     /// 设置产品分类数据
@@ -190,11 +286,22 @@ public class LTBrowseDataCenter: ObservableObject {
         }
     }
     public func setProductCategories(_ data: Any) {
-        setData(data, type: ProductCategoryDTO.self) { $0.toProducModels()
-        } completion: { [weak self] items in
-            self?.productsByCategoryData = items
-            LTBrowseDataCenter.isUseProductsByCategory = true
-        }
+//        setData(data, type: ProductCategoryDTO.self) { $0.toProducModels()
+//        } completion: { [weak self] items,  _ in
+//            self?.productsByCategoryData = items
+//            LTBrowseDataCenter.isUseProductsByCategory = true
+//        }
+        
+        setData(data, type: ProductCategoryDTO.self) { $0.toProducModels() } completion: { result  in
+           switch result {
+           case .success(let items):
+               self.productsByCategoryData = items
+               LTBrowseDataCenter.isUseProductsByCategory = true
+           case .failure(let err):
+               print("Error decoding content list: \(err)")
+               LTBrowseDataCenter.isUseProductsByCategory = false
+           }
+       }
 
     }
     
@@ -212,10 +319,21 @@ public class LTBrowseDataCenter: ObservableObject {
         }
     }
     public func setProducTyes(_ data: Any) {
-        setData(data, type: TabItemDTO.self, transform: { $0.toProducType()}) { [weak self] items in
-            self?.producTypes = items
-            LTBrowseDataCenter.isUseProducTypes = true
-        }
+//        setData(data, type: TabItemDTO.self, transform: { $0.toProducType()}) { [weak self] items,_ in
+//            self?.producTypes = items
+//            LTBrowseDataCenter.isUseProducTypes = true
+//        }
+        
+        setData(data, type: TabItemDTO.self) { $0.toProducType() } completion: { result  in
+           switch result {
+           case .success(let items):
+               self.producTypes = items
+               LTBrowseDataCenter.isUseProducTypes = true
+           case .failure(let err):
+               print("Error decoding content list: \(err)")
+               LTBrowseDataCenter.isUseProducTypes = false
+           }
+       }
     }
     
     /// 设置规格数据
@@ -232,43 +350,111 @@ public class LTBrowseDataCenter: ObservableObject {
         }
     }
     public  func setSpecifications(_ data: Any) {
-        setData(data, type: SpecificationDTO.self, transform: { $0.toSpecificationsItem() }) { [weak self] items in
-            self?.specificationsData = items
-            LTBrowseDataCenter.isUseSpecifications = true
-        }
+//        setData(data, type: SpecificationDTO.self, transform: { $0.toSpecificationsItem() }) { [weak self] items, _ in
+//            self?.specificationsData = items
+//            LTBrowseDataCenter.isUseSpecifications = true
+//        }
+        setData(data, type: SpecificationDTO.self) { $0.toSpecificationsItem() } completion: { result  in
+           switch result {
+           case .success(let items):
+               self.specificationsData = items
+               LTBrowseDataCenter.isUseSpecifications = true
+           case .failure(let err):
+               print("Error decoding content list: \(err)")
+               LTBrowseDataCenter.isUseSpecifications = false
+           }
+       }
     }
     
     // 统一的JSON 解析方法
-    private func parseJSON<T: Codable, U>(_ jsonString: String, type: T.Type, transform: (T) -> U, completion: @escaping ([U]) -> Void) {
-        guard let data = jsonString.data(using: .utf8) else {
-            print("Error: 无效的JSON 字符串")
-            completion([])
-            return
-        }
-        parseData(data, type: type, transform: transform, completion: completion)
-    }
-    
-    private func parseData<T: Codable, U>(_ data: Data, type: T.Type, transform: (T) -> U, completion: @escaping ([U]) -> Void) {
+ 
+    private func parseData<T: Codable, U>(_ data: Data, type: T.Type, transform: (T) -> U, completion: @escaping (Result<[U], Error>) -> Void) {
         do {
-            let decoded = try JSONDecoder().decode([T].self, from: data)
-            completion(decoded.map(transform))
+            
+            //尝试解码单个对象
+            if let singleObject = try? JSONDecoder().decode(T.self, from: data) {
+                completion(.success([transform(singleObject)]))
+                return
+            }
+            //尝试解码为数组
+            if let array = try? JSONDecoder().decode([T].self, from: data) {
+                completion(.success(array.map(transform)))
+                return
+            }
+            
+            throw ParseError.typeMismatch
+            
         } catch
         {
             print("Error 转换:\(error)")
-            completion([])
+            completion(.failure(error))
         }
+    }
+ 
+    
+    private func setData<T: Codable, U>(_ data: Any, type: T.Type, transform:  @escaping (T) -> U, completion: @escaping (Result<[U],Error>) -> Void) {
+        
+        /*
+        let process: (T) -> Void = { model in
+            if let homepageModel = model as? HomepageModel {
+                let result = homepageModel.toTransformedModel { banner in
+                    transform(banner as! T)
+                } categoryTransform: { category in
+                    transform(category as! T)
+                }
+                completion(.success(result))
+
+            }else {
+                // 普通模型直接转换
+                completion(.success([transform(model)]))
+            }
+        }
+        // 数据解析逻辑
+        */
+        // 统一转换为Data进行处理
+           let processData: (Data) -> Void = { data in
+               self.parseData(data, type: type, transform: transform, completion: completion)
+           }
+           
+           switch data {
+           case let jsonString as String:
+               guard let data = jsonString.data(using: .utf8) else {
+                   completion(.failure(ParseError.invalidJSONString))
+                   return
+               }
+               processData(data)
+               
+           case let jsonData as Data:
+               processData(jsonData)
+               
+           case let array as [T]:
+               // 直接复用parseData的成功路径
+               do {
+                   let data = try JSONEncoder().encode(array)
+                   processData(data)
+               } catch {
+                   completion(.failure(error))
+               }
+               
+           case let model as T:
+               // 直接复用parseData的成功路径
+               do {
+                   let data = try JSONEncoder().encode(model)
+                   processData(data)
+               } catch {
+                   completion(.failure(error))
+               }
+               
+           default:
+               completion(.failure(ParseError.invalidInputType))
+           }
     }
     
     
-    private func setData<T: Codable, U>(_ data: Any, type: T.Type, transform: (T) -> U, completion: @escaping ([U]) -> Void) {
-        if let jsonString = data as? String {
-            parseJSON(jsonString, type: type, transform: transform, completion: completion)
-        }else if let jsonData = data as? Data {
-            parseData(jsonData, type: type, transform: transform, completion: completion)
-        }else if let array = data as? [T] {
-            completion(array.map(transform))
-        }
-    }
+    
+    
+    
+    
     
     
     /// 批量设置
@@ -292,10 +478,9 @@ public class LTBrowseDataCenter: ObservableObject {
             setSpecifications(_specifications)
         }
     }
+ 
     
-
-
-
+ 
     // MARK: - Data Getters
     /// 获取首页走马灯列表
     public static func getHeadIconData() -> [BrowseViewItem]  {
@@ -321,22 +506,73 @@ public class LTBrowseDataCenter: ObservableObject {
     public static func getSpecifications() -> [SpecificationsItem] {
         return shared.specificationsData
     }
-    
- 
-    
  
 
 }
 
 
 // MARK: - DTO Models
+ 
+//MARK: -首页数据模型
+public struct HomepageModel: Codable {
+    var firstBannerList: [FirstBannerList]
+    var secondBannerList: [FirstBannerList]
+    var categoryList: [CategoryList]
+    
+    
+    // 转换为新的 HomepageModel 或其他目标模型
+    func toTransformedModel<U>(transform: (FirstBannerList) -> U, categoryTransform: (CategoryList) -> U) -> [U] {
+        let firstBannerItems = firstBannerList.map(transform)
+        let secondBannerItems = secondBannerList.map(transform)
+         let categoryItems = categoryList.map(categoryTransform)
+        return firstBannerItems + secondBannerItems + categoryItems
+        
+    }
+ 
+}
+ 
+//MARK: -首页数据模型 - 头部Banneer
+public struct FirstBannerList:  Codable {
+    var imageUrl: String
+    var productId: Int
+   // var themeColor: ColorDTO?
+    /// 构建 BrowseViewItem 模型
+    func toBrowseViewItem(_ theme:ColorDTO? = nil) -> BrowseViewItem {
+        return BrowseViewItem(
+            pId: productId,
+            title: "",
+            icon: "http://oss.ltwoo-app.top/" + imageUrl,
+            theme: theme?.toColor() ?? .blue
+        )
+    }
+}
+
+//MARK: -首页数据模型 - 分类
+public struct CategoryList:  Codable {
+    var categoryName: String = ""
+    var imageUrl: String = ""
+    var id: Int = 0
+ 
+    func toBrowseViewItem(_ theme:ColorDTO? = nil) -> BrowseViewItem {
+        return BrowseViewItem(
+            pId: id,
+            title: categoryName,
+            icon:  "http://oss.ltwoo-app.top/" + imageUrl,
+            theme: theme?.toColor() ?? .blue
+        )
+    }
+}
+  
+
 private struct HeadIconItemDTO: Codable {
+    var pId: Int
     let title: String
     let icon: String
     let themeColor: ColorDTO?
     
     func toBrowseViewItem() -> BrowseViewItem {
         return BrowseViewItem(
+            pId: pId,
             title: title,
             icon: icon,
             theme: themeColor?.toColor() ?? .white
@@ -344,14 +580,15 @@ private struct HeadIconItemDTO: Codable {
     }
 }
 
-
 private struct MenuItemDTO: Codable {
+    var pId: Int
     let title: String
     let icon: String
     let themeColor: ColorDTO?
-    
+    /// 构建 BrowseViewItem 模型
     func toBrowseViewItem() -> BrowseViewItem {
         return BrowseViewItem(
+            pId: pId,
             title: title,
             icon: icon,
             theme: themeColor?.toColor() ?? .white
@@ -360,12 +597,14 @@ private struct MenuItemDTO: Codable {
 }
 
 private struct ContentItemDTO: Codable {
+    var pId: Int
     let title: String
     let icon: String
     let themeColor: ColorDTO?
     
     func toBrowseViewItem() -> BrowseViewItem {
         return BrowseViewItem(
+            pId: pId,
             title: title,
             icon: icon,
             theme: themeColor?.toColor() ?? .black
@@ -412,15 +651,16 @@ private struct TabItemDTO: Codable {
 }
 
 private struct SpecificationDTO: Codable {
+    let tId: Int
     let title: String
     let des: String
     
     func toSpecificationsItem() -> SpecificationsItem {
-        return SpecificationsItem(title: title, des: des)
+        return SpecificationsItem(tId,title: title, des: des)
     }
 }
 
-private struct ColorDTO: Codable {
+public struct ColorDTO: Codable {
     let red: Double
     let green: Double
     let blue: Double

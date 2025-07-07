@@ -14,12 +14,18 @@ let package = Package(
             name: "LTBrowse",
             targets: ["LTBrowse"]),
     ],
-    dependencies: [],
+    dependencies: [
+        .package(url: "https://github.com/onevcat/Kingfisher.git", from: "8.0.0"),
+    ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
         // Targets can depend on other targets in this package and products from dependencies.
         .target(
-            name: "LTBrowse"),
+            name: "LTBrowse",
+            dependencies: [
+               .product(name: "Kingfisher", package: "Kingfisher"),
+            ]
+        ),
         .testTarget(
             name: "LTBrowseTests",
             dependencies: ["LTBrowse"]
