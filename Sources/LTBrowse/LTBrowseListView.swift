@@ -12,28 +12,32 @@ import SwiftUI
 public struct ProducModel: Identifiable, Hashable {
     public  let id = UUID()
    var typeId: Int  = 0  // 产品类型
+   var productId: Int
    var name: String // 名称
    var icon: String = ""  // 图片
+   var createdAt: Int = 0
    var parameter: String = "" // 产品参数
    var other: String = ""  //其他信息
    var des: String = "描述"
    var title: String = "详情页面"
     
-    public init(_ typeId: Int = 0, name: String, icon: String = "", parameter: String = "", other: String = "", des: String = "", title: String = "") {
+    public init(_ typeId: Int = 0, productId: Int = 0, name: String, icon: String = "", at: Int = 0, parameter: String = "", other: String = "", des: String = "", title: String = "") {
         self.typeId = typeId
+        self.productId = productId
         self.name = name
         self.icon = icon
         self.parameter = parameter
         self.other = other
         self.des = des
         self.title = title
+        self.createdAt = at
     }
 }
 
  
 public struct ProducType: Identifiable, Hashable {
     public let id = UUID()
-    var typeId: Int = 0
+    public var typeId: Int = 0
     var name: String
     var gearValue = ""
     public init(_ typeId: Int = 0, name: String, gearValue: String = "") {
@@ -59,8 +63,9 @@ public struct LTBrowseListView: View {
     @EnvironmentObject private var dataCenter: LTBrowseDataCenter
     @Environment(\.presentationMode) var presentationMode
    
+    var onTabChange: ((Int) -> Void)?
     
-    public init(tabItems: [ProducType] = [], productsByCategory: [[ProducModel]] = [] ){
+    public init(tabItems: [ProducType] = [], productsByCategory: [[ProducModel]] = [], onTabChange: ((Int) -> Void)? = nil ){
         
         
         let initialProductsTypes = LTBrowseDataCenter.isUseProducTypes ?  LTBrowseDataCenter.getProducTypes() :  tabItems
@@ -83,7 +88,7 @@ public struct LTBrowseListView: View {
             self._productsByCategory = State(initialValue: _pbCategory)
         }
     
- 
+        self.onTabChange = onTabChange
  
     }
     
@@ -137,6 +142,7 @@ public struct LTBrowseListView: View {
                     }
                     .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never)) //添加联动
                     .onChange(of: selectedTab) { newValue in
+                        onTabChange?(newValue)
                         // 当页面滑动改变时，同步滚动标签栏
                         withAnimation {
                             scrollViewProxy?.scrollTo(newValue, anchor: .center)

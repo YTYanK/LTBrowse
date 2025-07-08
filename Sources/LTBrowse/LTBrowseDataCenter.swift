@@ -6,6 +6,7 @@ import UIKit
 //#endif
 
 import SwiftUI
+import Combine
  
 @MainActor
 let LTB_SCRE_H = UIScreen.main.bounds.height
@@ -87,7 +88,20 @@ public class LTBrowseDataCenter: ObservableObject {
     
     @Published var specificationsData: [SpecificationsItem] = []
     
-//    @Published
+    /// 文件路径
+    @Published var fileUrlString = "http://oss.ltwoo-app.top/"
+    
+    // 新增：用于发布操作结果的Publisher
+    private let operationResultSubject = PassthroughSubject<Bool, Never>()
+    
+    var operationResultPublisher: AnyPublisher<Bool, Never> {
+          operationResultSubject.eraseToAnyPublisher()
+    }
+      
+    public  func notifyOperationResult(_ success: Bool) {
+          operationResultSubject.send(success)
+    }
+    
     
     
     /// 判断是否使用首页走马灯列表
@@ -134,11 +148,7 @@ public class LTBrowseDataCenter: ObservableObject {
         }
     }
     public func setHeadIcon(_ data: Any) {
-//        setData(data, type: FirstBannerList.self, transform: { $0.toBrowseViewItem() }) { [weak self] items, str in
-//            self?.headIconData = items
-//            LTBrowseDataCenter.isUseHeadIcon = true
-//        }
-        
+ 
          setData(data, type: FirstBannerList.self) { $0.toBrowseViewItem() } completion: { result  in
             switch result {
             case .success(let items):
@@ -153,7 +163,7 @@ public class LTBrowseDataCenter: ObservableObject {
     }
     
     /// json字符串设置 - 首页菜单数据
-    public func setMenuList(jsonString: String) {
+   /* public func setMenuList(jsonString: String) {
         if let data = jsonString.data(using: .utf8) {
             do {
                 let decoded = try JSONDecoder().decode([MenuItemDTO].self, from: data)
@@ -164,7 +174,7 @@ public class LTBrowseDataCenter: ObservableObject {
                 print("Error decoding menu list: \(error)")
             }
         }
-    }
+    } */
  
     /**
      设置首页菜单数据
@@ -187,7 +197,6 @@ public class LTBrowseDataCenter: ObservableObject {
      LTBrowseDataCenter.setMenuList(menuData as Any)
      */
     public static func setMenuList(_ data: Any) {
- 
         LTBrowseDataCenter.shared.setData(data, type: FirstBannerList.self) { $0.toBrowseViewItem() } completion: { result  in
             switch result {
             case .success(let items):
@@ -198,7 +207,6 @@ public class LTBrowseDataCenter: ObservableObject {
                 LTBrowseDataCenter.isUseMenuList = false
             }
         }
-
     }
     
     /// 设置首页内容列表数据
@@ -215,10 +223,6 @@ public class LTBrowseDataCenter: ObservableObject {
         }
     }
     public func setContentList(_ data: Any) {
-//        setData(data, type: FirstBannerList.self, transform: { $0.toBrowseViewItem() }) { [weak self] items, str in
-//            self?.contentListData = items
-//            LTBrowseDataCenter.isUseContentList = true
-//        }
         setData(data, type: FirstBannerList.self) { $0.toBrowseViewItem() } completion: { result  in
             switch result {
             case .success(let items):
@@ -257,11 +261,11 @@ public class LTBrowseDataCenter: ObservableObject {
                self.menuListData = items[0].categoryList.map {$0.toBrowseViewItem() }
                self.contentListData = items[0].secondBannerList.map { $0.toBrowseViewItem() }
                LTBrowseDataCenter.isUseHeadIcon = true
-                LTBrowseDataCenter.isUseMenuList = true
-                LTBrowseDataCenter.isUseContentList = true
+               LTBrowseDataCenter.isUseMenuList = true
+               LTBrowseDataCenter.isUseContentList = true
                 
               // 更新数据中心
-              print("首页数据解析  : \(items)")
+              print("首页数据解析完成进行更新  : \(items)")
             case .failure(let error):
                 print("首页数据解析失败: \(error.localizedDescription)")
                 
@@ -272,7 +276,7 @@ public class LTBrowseDataCenter: ObservableObject {
     
     
     
-    /// 设置产品分类数据
+    /// 设置产品分类目录下的数据
     public func setProductCategories(jsonString: String) {
         if let data = jsonString.data(using: .utf8) {
             do {
@@ -286,12 +290,6 @@ public class LTBrowseDataCenter: ObservableObject {
         }
     }
     public func setProductCategories(_ data: Any) {
-//        setData(data, type: ProductCategoryDTO.self) { $0.toProducModels()
-//        } completion: { [weak self] items,  _ in
-//            self?.productsByCategoryData = items
-//            LTBrowseDataCenter.isUseProductsByCategory = true
-//        }
-        
         setData(data, type: ProductCategoryDTO.self) { $0.toProducModels() } completion: { result  in
            switch result {
            case .success(let items):
@@ -304,26 +302,42 @@ public class LTBrowseDataCenter: ObservableObject {
        }
 
     }
+    public func setProductList(_ data: Any) {
+//        setData(data, type: [ProductDTO].self) { $0.toProducModel() } completion: { result  in
+//           switch result {
+//           case .success(let items):
+//               self.productsByCategoryData = items
+//               LTBrowseDataCenter.isUseProductsByCategory = true
+//           case .failure(let err):
+//               print("Error decoding content list: \(err)")
+//               LTBrowseDataCenter.isUseProductsByCategory = false
+//           }
+//       }
+
+    }
+    
+    
+    
     
     /// 设置标签项数据
-    public func setProducTypes(jsonString: String) {
+    @discardableResult
+    public func setProducTypes(jsonString: String) -> [ProducType]? {
         if let data = jsonString.data(using: .utf8) {
             do {
                 let decoded = try JSONDecoder().decode([TabItemDTO].self, from: data)
                 self.producTypes = decoded.map { $0.toProducType() }
                 LTBrowseDataCenter.isUseProducTypes = true
+                return self.producTypes
             } catch {
                 print("Error decoding tab items: \(error)")
                 LTBrowseDataCenter.isUseProducTypes = false
+                return nil
             }
+        }else {
+            return nil
         }
     }
     public func setProducTyes(_ data: Any) {
-//        setData(data, type: TabItemDTO.self, transform: { $0.toProducType()}) { [weak self] items,_ in
-//            self?.producTypes = items
-//            LTBrowseDataCenter.isUseProducTypes = true
-//        }
-        
         setData(data, type: TabItemDTO.self) { $0.toProducType() } completion: { result  in
            switch result {
            case .success(let items):
@@ -335,6 +349,8 @@ public class LTBrowseDataCenter: ObservableObject {
            }
        }
     }
+    
+    
     
     /// 设置规格数据
     public func setSpecifications(jsonString: String) {
@@ -350,10 +366,6 @@ public class LTBrowseDataCenter: ObservableObject {
         }
     }
     public  func setSpecifications(_ data: Any) {
-//        setData(data, type: SpecificationDTO.self, transform: { $0.toSpecificationsItem() }) { [weak self] items, _ in
-//            self?.specificationsData = items
-//            LTBrowseDataCenter.isUseSpecifications = true
-//        }
         setData(data, type: SpecificationDTO.self) { $0.toSpecificationsItem() } completion: { result  in
            switch result {
            case .success(let items):
@@ -366,8 +378,7 @@ public class LTBrowseDataCenter: ObservableObject {
        }
     }
     
-    // 统一的JSON 解析方法
- 
+    //MARK: 统一的JSON 解析方法
     private func parseData<T: Codable, U>(_ data: Data, type: T.Type, transform: (T) -> U, completion: @escaping (Result<[U], Error>) -> Void) {
         do {
             
@@ -449,13 +460,7 @@ public class LTBrowseDataCenter: ObservableObject {
                completion(.failure(ParseError.invalidInputType))
            }
     }
-    
-    
-    
-    
-    
-    
-    
+   
     
     /// 批量设置
     public func setupAllData(headIcons: Any? = nil, menuList: Any? = nil, contentList: Any? = nil, productCategories: Any? = nil, producTypes: Any? = nil, specifications: Any? = nil) {
@@ -512,7 +517,6 @@ public class LTBrowseDataCenter: ObservableObject {
 
 
 // MARK: - DTO Models
- 
 //MARK: -首页数据模型
 public struct HomepageModel: Codable {
     var firstBannerList: [FirstBannerList]
@@ -563,7 +567,7 @@ public struct CategoryList:  Codable {
     }
 }
   
-
+/*
 private struct HeadIconItemDTO: Codable {
     var pId: Int
     let title: String
@@ -579,7 +583,6 @@ private struct HeadIconItemDTO: Codable {
         )
     }
 }
-
 private struct MenuItemDTO: Codable {
     var pId: Int
     let title: String
@@ -595,7 +598,6 @@ private struct MenuItemDTO: Codable {
         )
     }
 }
-
 private struct ContentItemDTO: Codable {
     var pId: Int
     let title: String
@@ -611,7 +613,20 @@ private struct ContentItemDTO: Codable {
         )
     }
 }
+*/
 
+
+//MARK: - 分类目录数据模型
+private struct TabItemDTO: Codable {
+    let id: Int
+    let categoryName: String
+    let speedClass: String
+    
+    func toProducType() -> ProducType {
+        return ProducType(id, name: categoryName, gearValue: speedClass)
+    }
+}
+//MARK: - 分类目录下的数据列表模型
 private struct ProductCategoryDTO: Codable {
     let products: [ProductDTO]
     
@@ -619,36 +634,33 @@ private struct ProductCategoryDTO: Codable {
         return products.map { $0.toProducModel() }
     }
 }
-
+//MARK: - 产品模型
 private struct ProductDTO: Codable {
-    let typeId: Int
-    let name: String
-    let icon: String
+    /// 分类目录id
+    let productCategoryId: Int
+    /// 分类目录名称
+    let productCategoryName: String
+    /// 产品id
+    let id: Int
+    /// 产品名称
+    let productName: String
+    /// 产品图片
+    let imageUrl: String
+    // 创建时间
+    let createAt: Int
+
+    /// 产品参数
     let parameter: String?
     let other: String?
     let des: String?
     
     func toProducModel() -> ProducModel {
-        return ProducModel(
-            typeId,
-            name: name,
-            icon: icon,
-            parameter: parameter ?? "",
-            other: other ?? "",
-            des: des ?? ""
-        )
+        return ProducModel(productCategoryId, productId: id, name: productName, icon: "http://oss.ltwoo-app.top/" + imageUrl, at: createAt, parameter: parameter ?? "", other: other ?? "", des: des ?? "", title: productCategoryName)
+        
     }
 }
 
-private struct TabItemDTO: Codable {
-    let typeId: Int
-    let name: String
-    let gearValue: String
-    
-    func toProducType() -> ProducType {
-        return ProducType(typeId, name: name, gearValue: gearValue)
-    }
-}
+
 
 private struct SpecificationDTO: Codable {
     let tId: Int

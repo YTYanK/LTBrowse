@@ -143,7 +143,7 @@ public struct LTBrowseDetailsView: View {
 ]
 
 #Preview {
-    LTBrowseDetailsView(produc: ProducModel(name: "eRX电子液压碟刹afefawefawwwefaefaeafefaefaefaefaefafdafeawefawefawefaewfaewfaefawefawefawefawefaefawefaewfawefawefawefawefawefa", icon: ""), specifications: TestItems)
+    LTBrowseDetailsView(produc: ProducModel(productId: 0, name: "eRX电子液压碟刹afefawefawwwefaefaeafefaefaefaefaefafdafeawefawefawefaewfaewfaefawefawefawefawefaefawefaewfawefawefawefawefawefa", icon: ""), specifications: TestItems)
  
 }
  

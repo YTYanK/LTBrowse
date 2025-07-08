@@ -4,9 +4,14 @@
 //
 //  Created by K YTYan on 2025/3/5.
 //
+/**
+ // 语言设置操作： .environment(\.locale, .init(identifier: currentLanguage()))
+ */
+
 
 import SwiftUI
 import Kingfisher
+import Combine
 //@MainActor
 //public class LTBrowseViewModel: ObservableObject {
 //    @Published var vm_headIcons: [BrowseViewItem]?
@@ -26,15 +31,17 @@ public struct LTBrowseView: View {
     @State private var contentList: [BrowseViewItem]
     
     var toggleCange:((String, Bool)->Void)? = nil
-    var operateBlock: ((String)->Void)? = nil
+    var operateBlock: ((String)-> Void)? = nil
     
     @State private var isGotoList: Bool = false
     @State private var currentPage = 0
  
  
+    @State private  var cancellables = Set<AnyCancellable>()
+    
     private let adapter = LTScreenAdapter.shared
     
-    public init(headIcons: [BrowseViewItem] = [], menus: [BrowseViewItem] = [], contents: [BrowseViewItem] = [], toggleCange: ((String, Bool)->Void)?, operateBlock: ((String)->Void)?) {
+    public init(headIcons: [BrowseViewItem] = [], menus: [BrowseViewItem] = [], contents: [BrowseViewItem] = [], toggleCange: ((String, Bool)->Void)?, operateBlock: ((String) -> Void)?) {
        
         let initialHeadIcons = LTBrowseDataCenter.isUseHeadIcon ?  LTBrowseDataCenter.getHeadIconData() :  headIcons
         let initialMenuList = LTBrowseDataCenter.isUseMenuList ?  LTBrowseDataCenter.getMenuList() : menus
@@ -50,10 +57,13 @@ public struct LTBrowseView: View {
     
     public var body: some View {
  
-//        NavigationView { }.environment(\.locale, .init(identifier: currentLanguage()))
+
             ZStack {
                 NavigationLink("_", isActive: $isGotoList) {
-                    LTBrowseListView().navigationBarBackButtonHidden().environmentObject(self.dataCenter)
+                    LTBrowseListView(onTabChange: { newTab in
+                        print("切换到\(newTab)")
+                        self.toggleCange?("tab-\(newTab)", true)
+                    }).navigationBarBackButtonHidden().environmentObject(self.dataCenter)
                 }.hidden()
                 GeometryReader { geometry in
                     ScrollView(.vertical, showsIndicators: false) {
@@ -62,7 +72,8 @@ public struct LTBrowseView: View {
                             TabView(selection: $currentPage) {
                                 ForEach(headIcons, id: \.self) { head in
                                     LTImageView(tag: "headIcons", icon: head.icon, pId: head.pId) { curId, curTag in
-                                        self.operateBlock?("\(curTag)-\(curId)")
+//                                        self.operateBlock?("\(curTag)-\(curId)")
+                                        self.handleOperation(tag: curTag, id: curId)
                                     }
                                 }
  
@@ -76,8 +87,9 @@ public struct LTBrowseView: View {
                             ForEach(menuList, id: \.self) { menu in
                                VStack {
                                         LTImageView(tag: "MenuIcons", icon: menu.icon, pId: menu.pId, operateBlock: { curId, curTag in
-                                            self.isGotoList = true
-                                            self.operateBlock?("\(curTag)-\(curId)")
+//                                            self.isGotoList = true
+//                                            self.operateBlock?("\(curTag)-\(curId)")
+                                            self.handleOperation(tag: curTag, id: curId)
                                         })
                                         .background(Color.red)
                                         .frame(width: adapter.setWidth(68), height: adapter.setWidth(68))
@@ -86,8 +98,9 @@ public struct LTBrowseView: View {
                                             .font(.system(size: adapter.setFont(size: 13), weight: .medium))
                                             .foregroundColor(menu.theme)
                                             .onTapGesture {
-                                                self.isGotoList = true
-                                                self.operateBlock?("MenuIcons-\(menu.pId)")
+//                                                self.isGotoList = true
+//                                                self.operateBlock?("MenuIcons-\(menu.pId)")
+                                                self.handleOperation(tag: "MenuIcons", id: menu.pId)
                                             }
                                     }.padding(adapter.setSize(size: 6))
                             }
@@ -101,7 +114,8 @@ public struct LTBrowseView: View {
 //                            } label: {
                                 
                             LTImageView(tag: "ContentIcons", icon: content.icon, pId: content.pId, operateBlock: { curId, curTag in
-                                self.operateBlock?("\(curTag)-\(curId)")
+//                                self.operateBlock?("\(curTag)-\(curId)")
+                                self.handleOperation(tag: curTag, id: curId)
                             }).frame(width: adapter.getRelativeWidth(0.9))
  
                         }
@@ -113,8 +127,8 @@ public struct LTBrowseView: View {
             .navigationBarHidden(true)
             .edgesIgnoringSafeArea(.all)
             .onAppear {
-                  print("??\(LTScreenAdapter.SCRE_H) -----------\(LTScreenAdapter.SCRE_W)")
-               
+                  print("查看页面尺寸\(LTScreenAdapter.SCRE_H) -----------\(LTScreenAdapter.SCRE_W)")
+                self.setupOperationListener()
             }
             .onReceive(dataCenter.$headIconData) { newValue in
                 if  LTBrowseDataCenter.isUseHeadIcon   {
@@ -134,6 +148,25 @@ public struct LTBrowseView: View {
 
     }
     
+    private  func setupOperationListener() {
+        dataCenter.operationResultPublisher
+            .receive(on: DispatchQueue.main)
+            .sink { success in
+                isGotoList = success // 直接更新状态
+                print("操作完成，跳转状态: \(success)")
+            }
+            .store(in: &cancellables)
+    }
+    
+    // 新增：统一处理操作逻辑
+    private func handleOperation(tag: String, id: Int) {
+           operateBlock?("\(tag)-\(id)")
+         // 根据operateBlock的返回值控制isGotoList
+//        self.isGotoList = operationResult
+         
+         // 如果需要，也可以在这里添加其他逻辑
+         print("操作触发: \(tag)-\(id), 跳转状态:")
+     }
  
     
     
