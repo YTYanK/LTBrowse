@@ -7,13 +7,17 @@
 
 
 import SwiftUI
+import Kingfisher
+import Combine
 
  
 public struct ProducModel: Identifiable, Hashable {
     public  let id = UUID()
-   var typeId: Int  = 0  // 产品类型
-   var productId: Int
-   var name: String // 名称
+   /// 分类目录ID/产品类型
+   var typeId: Int  = 0
+   /// 产品ID
+   var productId: Int = 0
+   var name: String = ""// 名称
    var icon: String = ""  // 图片
    var createdAt: Int = 0
    var parameter: String = "" // 产品参数
@@ -21,7 +25,8 @@ public struct ProducModel: Identifiable, Hashable {
    var des: String = "描述"
    var title: String = "详情页面"
     
-    public init(_ typeId: Int = 0, productId: Int = 0, name: String, icon: String = "", at: Int = 0, parameter: String = "", other: String = "", des: String = "", title: String = "") {
+   var specifications: [SpecificationsItem] = []
+   public init(_ typeId: Int = 0, productId: Int = 0, name: String = "", icon: String = "", at: Int = 0, parameter: String = "", other: String = "", des: String = "", title: String = "", _ specifications: [SpecificationsItem] = []) {
         self.typeId = typeId
         self.productId = productId
         self.name = name
@@ -31,11 +36,13 @@ public struct ProducModel: Identifiable, Hashable {
         self.des = des
         self.title = title
         self.createdAt = at
+        self.specifications = specifications
     }
 }
 
  
 public struct ProducType: Identifiable, Hashable {
+ 
     public let id = UUID()
     public var typeId: Int = 0
     var name: String
@@ -45,6 +52,7 @@ public struct ProducType: Identifiable, Hashable {
         self.name = name
         self.gearValue = gearValue
     }
+   
 }
   
 
@@ -53,60 +61,45 @@ public struct LTBrowseListView: View {
     
  
     @State var selectedTab: Int = 0
-    @State private var tabItems: [ProducType]
-    /// 产品数据
-    @State private var productsByCategory: [[ProducModel]]
+    @State private var tabItems: [ProducType] = []
+    /// 产品数据 - 不能去了
+    @State private var productsByCategory: [[ProducModel]] = []
     // 添加滚动视图的引用
     @Namespace private var animation
     @State private var scrollViewProxy: ScrollViewProxy? = nil
-  
+    
+    @State private var goDetails: Bool = false
+    @State private var listCancellables = Set<AnyCancellable>()
+    ///订阅标记
+    @State private var didSetupListener = false
+    
     @EnvironmentObject private var dataCenter: LTBrowseDataCenter
     @Environment(\.presentationMode) var presentationMode
    
-    var onTabChange: ((Int) -> Void)?
+    var onTabChange: ((_ indx:Int, _ tId:Int) -> Void)?
+    var onClickDetails:((Int) -> Void)?
     
-    public init(tabItems: [ProducType] = [], productsByCategory: [[ProducModel]] = [], onTabChange: ((Int) -> Void)? = nil ){
-        
-        
-        let initialProductsTypes = LTBrowseDataCenter.isUseProducTypes ?  LTBrowseDataCenter.getProducTypes() :  tabItems
-        let initialProductsByCategory = LTBrowseDataCenter.isUseProductsByCategory ?  LTBrowseDataCenter.getProductsByCategory() : productsByCategory
-        
-        self._tabItems = State(initialValue: initialProductsTypes)
-        // 为每个分类创建对应的产品列表
-        if initialProductsTypes.count == initialProductsByCategory.count {
-            self._productsByCategory = State(initialValue: initialProductsByCategory)
-
-        }else {
-            var _pbCategory:[[ProducModel]] = []
-            initialProductsTypes.forEach { item in
-                if item.typeId < initialProductsByCategory.count {
-                    _pbCategory.append(initialProductsByCategory[item.typeId])
-                }else {
-                    _pbCategory.append([])
-                }
-            }
-            self._productsByCategory = State(initialValue: _pbCategory)
-        }
-    
+    public init(onTabChange: ((Int, Int) -> Void)? = nil, onClickDetails: ((Int) -> Void)? = nil) {
         self.onTabChange = onTabChange
- 
+        self.onClickDetails = onClickDetails
     }
     
     private let adapter = LTScreenAdapter.shared
     let colorDF = Color(UIColor(red: 223/255, green:  223/255, blue:  223/255, alpha: 1))
     let _size = LTB_SCRE_W * 0.9
+    
+    
     public  var body: some View {
 
-            GeometryReader { geometry in
+         GeometryReader { geometry in
                 VStack(spacing: 5)  {
-                    
                     // 顶部标签滚动视图
                     ScrollViewReader { proxy in
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: adapter.setSize(size: 8)) {
-                                ForEach(Array(tabItems.enumerated()), id: \.element) { index, tab in
+                                ForEach(Array(tabItems.enumerated()), id: \.element) { index, item in
                                     TabItemView(
-                                        tab: tab,
+                                        tab: item,
                                         isSelected: selectedTab == index,
                                         namespace: animation
                                     ) {
@@ -127,12 +120,15 @@ public struct LTBrowseListView: View {
                             scrollViewProxy = proxy
                         }
                     }
-                    
+                    // 内容列表
                     TabView(selection: $selectedTab) {
                         ForEach(Array(productsByCategory.enumerated()), id: \.offset) { index, products in
                             ScrollView {
                                 StaggeredGrid(columns: 2, spacing: adapter.setSize(size: 10), list: products) { item in
-                                    ProductItemView(item: item).environmentObject(self.dataCenter)
+                                    ProductItemView(goToDetails: $goDetails,item: item, onClickDetails: { PId in
+                                        self.onClickDetails?(PId)
+                                    }).environmentObject(self.dataCenter)
+                                    
                                 }
                                 .padding(.horizontal, adapter.setSize(size: 16))
                             }
@@ -142,7 +138,8 @@ public struct LTBrowseListView: View {
                     }
                     .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never)) //添加联动
                     .onChange(of: selectedTab) { newValue in
-                        onTabChange?(newValue)
+                        
+                        onTabChange?(newValue, self.tabItems[newValue].typeId)
                         // 当页面滑动改变时，同步滚动标签栏
                         withAnimation {
                             scrollViewProxy?.scrollTo(newValue, anchor: .center)
@@ -151,75 +148,77 @@ public struct LTBrowseListView: View {
                     
                 }
                 
-            }
-            
-//        }
+         }
         .background(LTB_BG_Color.edgesIgnoringSafeArea(.all))
         .navigationBarHidden(false)
         .toolbar {
                ToolbarItem(placement: .principal) {
-                   Text(dataCenter.titls["ListViewTitle"]!)
+                   Text(dataCenter.titls[LTBrowseTitlsKey.ListViewTitle.keyValue]!)
                        .foregroundColor(.black).font(.system(size: 17, weight: .bold))  // 设置标题颜色
                }
            }
         .navigationBarItems(leading:  AnyView(UIView.returnNavLeftView(icon:"back_arrow",width: adapter.setSize(size: 18), height: adapter.setSize(size: 18) ,{
+            dataCenter.notifyOperationResult(("List",false))
+            listCancellables.removeAll()
             presentationMode.wrappedValue.dismiss()
+            
         })))
         .onAppear {
- 
+            if !didSetupListener {
+                self.setupOperationDetailsListener()
+                didSetupListener = true
+            }
         }
         .onReceive(dataCenter.$producTypes) { newValue in
             if  LTBrowseDataCenter.isUseProducTypes {
-                self.setupProductData(newValue, nil)
+                self.setupProductTypeData(newValue)
             }
         }
         .onReceive(dataCenter.$productsByCategoryData) { newValue in
-            if LTBrowseDataCenter.isUseProductsByCategory {
-                self.setupProductData(nil, newValue)
-            }
+             if LTBrowseDataCenter.isUseProductsByCategory {
+                 self.setupProductData(newValue)
+             }
         }
 //        .environment(\.locale, .init(identifier: currentLanguage()))
         
     }
-    
-//    func currentLanguage() -> String {
-//        return Locale.current.language.languageCode?.identifier ?? "未知语言"
-//    }
+ 
+    func setupProductTypeData(_ types: [ProducType]) {
+         self.tabItems = types
+         print("设置分类目录成功！")
+       
+    }
     // 设置产品数据
-    func setupProductData(_ types: [ProducType]? = nil, _ category:  [[ProducModel]]? = nil) {
-                 var _types =  self.tabItems
-                 var _category = self.productsByCategory
-         
-                 if types != nil  {
-                     _types =  types!
-                 }
-                 if  category  != nil {
-                     _category = category!
-                 }
-                 self.tabItems = _types
-         
-                 // 为每个分类创建对应的产品列表
-                 if _types.count == _category.count {
-                     self.productsByCategory = _category
-         
-                 }else {
-                     var _pbCategory:[[ProducModel]] = []
-                     _types.forEach { item in
-                         if item.typeId < _category.count {
-                             _pbCategory.append(_category[item.typeId])
-                         }else {
-                             _pbCategory.append([])
-                         }
-                     }
-                     self.productsByCategory = _pbCategory
-                 }
-          
+    func setupProductData(_ category:  [Int:[ProducModel]]) {
+        var _types =  self.tabItems
+        var _category: [[ProducModel]] =   Array(repeating: [], count: self.tabItems.count)
+                 
+        if !category.isEmpty {
+            _types.enumerated().forEach { index, fruit in
+                print("Index: \(index), Element: \(fruit)")
+                if let _ary = category[fruit.typeId]   {
+                    _category[index] = _ary
+                }
+            }
+           self.productsByCategory = _category
+        }
+ 
      }
  
+    // 控制是否去详情页面
+    private  func setupOperationDetailsListener() {
+        dataCenter.operationDetailsResultPublisher
+            .receive(on: DispatchQueue.main)
+            .sink { success in
+                goDetails = success // 直接更新状态
+                print("list->操作完成，跳转状态: \(success)")
+            }
+            .store(in: &listCancellables)
+    }
 }
 
 
-// 分类标签视图
+// 分类目录标签视图
 private struct TabItemView: View {
   let tab: ProducType
   let isSelected: Bool
@@ -234,7 +233,7 @@ private struct TabItemView: View {
           VStack(spacing: adapter.setSize(size: 4)) {
               Text(tab.name)
                   .font(.system(size: adapter.setFont(size: isSelected ? 18 : 15)))
-                  .fontWeight(.bold) //isSelected ?
+                  .fontWeight(.bold)
               Text(tab.gearValue)
                   .font(.system(size: adapter.setFont(size: 13)))
                   .fontWeight(.light)
@@ -247,48 +246,61 @@ private struct TabItemView: View {
                   .fill(isSelected ? Color.black : colorDF)
           )
           // 添加过渡动画
-         // .scaleEffect(isSelected ? 1.05 : 1.0)
+          // .scaleEffect(isSelected ? 1.05 : 1.0)
           .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
           // 添加匹配几何效果
           .matchedGeometryEffect(id: "tab\(tab.id)", in: namespace, isSource: isSelected)
       }
       .buttonStyle(PlainButtonStyle())
-//      .background(Color.red)
-      //.animation(.spring(response: 0.2, dampingFraction: 0.7), value: isSelected)
   }
 }
 
 
 // 产品项视图
 private struct ProductItemView: View {
-    let item: ProducModel
+    @Binding var goToDetails: Bool
+    @State var item: ProducModel
+    var onClickDetails: ((Int)-> Void)? = nil
     private let adapter = LTScreenAdapter.shared
     @State private var isAppeared = false
     @EnvironmentObject private var dataCenter: LTBrowseDataCenter
     var body: some View {
-        NavigationLink {
-         
-            LTBrowseDetailsView(produc: item).navigationBarBackButtonHidden().environmentObject(self.dataCenter)
-        } label: {
-            VStack(alignment: .leading, spacing: adapter.setSize(size: 8)) {
-                
-                if  item.icon != "" {
-                    Image(item.icon)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(maxWidth: .infinity)
-                        .background(Color.white)
-                        .cornerRadius(adapter.setSize(size: 10))
-               } else {
-                   // 显示默认图片或占位符
-                   Rectangle()
-                       .fill(Color.gray.opacity(0.2))
-                       .frame(maxWidth: .infinity)
-                       .frame(height: adapter.setHeight(160))
-                       .cornerRadius(adapter.setSize(size: 10))
-               }
+        
+        ZStack {
+            NavigationLink("_", isActive: $goToDetails) {
+                LTBrowseDetailsView(produc: dataCenter.productsDetailsData ?? item).navigationBarBackButtonHidden().environmentObject(self.dataCenter)
+            }.hidden()
+            
+            VStack(alignment: .center, spacing: adapter.setSize(size: 8)) {
+                Group {
+                    if let icon = UIImage(named: item.icon) {
+                        Image(uiImage: icon)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: adapter.setSize(size: 120), height:  adapter.setSize(size: 120))
  
+                    }else if let urlIcon = URL(string: item.icon) {
+                        KFImage(urlIcon)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: adapter.setSize(size: 120), height:  adapter.setSize(size: 120))
+       
+                    } else {
+                       // 显示默认图片或占位符
+                       Rectangle()
+                           .fill(Color.gray.opacity(0.2))
+                           .frame(width: adapter.setSize(size: 120), height:  adapter.setSize(size: 120))
+ 
+                          
+                   }
+     
+                       
                     
+                }
+                 .background(Color.white)
+                 .cornerRadius(adapter.setSize(size: 10))
+                 .tag(item.typeId)
+ 
                 Text(item.name)
                     .font(.system(size: adapter.setFont(size: 14)))
                     .foregroundColor(.black)
@@ -302,6 +314,9 @@ private struct ProductItemView: View {
             .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
         }
         .opacity(isAppeared ? 1 : 0)
+        .onTapGesture {
+            self.onClickDetails?(item.productId)
+        }
        // .offset(y: isAppeared ? 0 : 20)
         .onAppear {
             withAnimation(.spring(response: 0.3, dampingFraction: 0.8).delay(0.1)) {

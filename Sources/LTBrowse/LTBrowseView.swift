@@ -12,14 +12,35 @@
 import SwiftUI
 import Kingfisher
 import Combine
-//@MainActor
-//public class LTBrowseViewModel: ObservableObject {
-//    @Published var vm_headIcons: [BrowseViewItem]?
-//    @Published var vm_menuList: [BrowseViewItem]?
-//    @Published var vm_contentList: [BrowseViewItem]?
-// 
-//}
+ 
 
+/// 事件消息标签
+public enum EventMessageTags {
+    case EMT_Tab
+    /// 列表页-事件
+    case EMT_ListIcons
+    /// 首页-顶部banner
+    case EMT_HeadIcons
+    /// 首页-内容列表事件
+    case EMT_ContentIcons
+    /// 首页-菜单事件
+    case EMT_MenuIcons
+    /// 标签内容
+    public  var content: String {
+        switch self {
+        case .EMT_Tab:
+            return "tab"
+        case .EMT_ListIcons:
+            return "listIcons"
+        case .EMT_HeadIcons:
+            return "headIcons"
+        case .EMT_ContentIcons:
+            return "contentIcons"
+        case .EMT_MenuIcons:
+            return "menuIcons"
+        }
+    }
+}
 
 @available(iOS 14.0, *)
 public struct LTBrowseView: View {
@@ -30,14 +51,18 @@ public struct LTBrowseView: View {
     @State private var menuList: [BrowseViewItem]
     @State private var contentList: [BrowseViewItem]
     
+    /// 切换返回 tab-index-id
     var toggleCange:((String, Bool)->Void)? = nil
     var operateBlock: ((String)-> Void)? = nil
     
     @State private var isGotoList: Bool = false
+    
+    @State private var isHomeGotoDetails: Bool = false
     @State private var currentPage = 0
- 
- 
-    @State private  var cancellables = Set<AnyCancellable>()
+    @State private var  productsDetailsData: ProducModel = ProducModel()
+    // 订阅标记
+    @State private var didSetupListener = false
+    @State private  var homeCancellables = Set<AnyCancellable>()
     
     private let adapter = LTScreenAdapter.shared
     
@@ -56,23 +81,28 @@ public struct LTBrowseView: View {
     }
     
     public var body: some View {
- 
-
+  
             ZStack {
                 NavigationLink("_", isActive: $isGotoList) {
-                    LTBrowseListView(onTabChange: { newTab in
-                        print("切换到\(newTab)")
-                        self.toggleCange?("tab-\(newTab)", true)
+                    LTBrowseListView(onTabChange: { newTab, newTId  in
+                        self.toggleCange?("\(EventMessageTags.EMT_Tab.content)-\(newTab)-\(newTId)", true)
+                    }, onClickDetails: { newPId in
+                        self.handleOperation(tag: EventMessageTags.EMT_ListIcons.content, id: newPId) //Details
                     }).navigationBarBackButtonHidden().environmentObject(self.dataCenter)
                 }.hidden()
+                
+                NavigationLink("_", isActive: $isHomeGotoDetails) {
+                     LTBrowseDetailsView(produc: productsDetailsData ).navigationBarBackButtonHidden().environmentObject(self.dataCenter)
+                    
+                }.hidden()
+  
                 GeometryReader { geometry in
                     ScrollView(.vertical, showsIndicators: false) {
                         // 首页- bann
                         VStack {
                             TabView(selection: $currentPage) {
                                 ForEach(headIcons, id: \.self) { head in
-                                    LTImageView(tag: "headIcons", icon: head.icon, pId: head.pId) { curId, curTag in
-//                                        self.operateBlock?("\(curTag)-\(curId)")
+                                    LTImageView(tag: EventMessageTags.EMT_HeadIcons.content, icon: head.icon, pId: head.pId) { curId, curTag in
                                         self.handleOperation(tag: curTag, id: curId)
                                     }
                                 }
@@ -86,9 +116,7 @@ public struct LTBrowseView: View {
                         HStack {
                             ForEach(menuList, id: \.self) { menu in
                                VStack {
-                                        LTImageView(tag: "MenuIcons", icon: menu.icon, pId: menu.pId, operateBlock: { curId, curTag in
-//                                            self.isGotoList = true
-//                                            self.operateBlock?("\(curTag)-\(curId)")
+                                   LTImageView(tag: EventMessageTags.EMT_MenuIcons.content, icon: menu.icon, pId: menu.pId, operateBlock: { curId, curTag in
                                             self.handleOperation(tag: curTag, id: curId)
                                         })
                                         .background(Color.red)
@@ -98,9 +126,7 @@ public struct LTBrowseView: View {
                                             .font(.system(size: adapter.setFont(size: 13), weight: .medium))
                                             .foregroundColor(menu.theme)
                                             .onTapGesture {
-//                                                self.isGotoList = true
-//                                                self.operateBlock?("MenuIcons-\(menu.pId)")
-                                                self.handleOperation(tag: "MenuIcons", id: menu.pId)
+                                                self.handleOperation(tag: EventMessageTags.EMT_MenuIcons.content, id: menu.pId)
                                             }
                                     }.padding(adapter.setSize(size: 6))
                             }
@@ -108,13 +134,7 @@ public struct LTBrowseView: View {
  
                         // 首页-列表
                         ForEach(contentList, id: \.self) { content in
-
-//                            NavigationLink {
-//                                LTBrowseListView().navigationBarBackButtonHidden().environmentObject(self.dataCenter)
-//                            } label: {
-                                
-                            LTImageView(tag: "ContentIcons", icon: content.icon, pId: content.pId, operateBlock: { curId, curTag in
-//                                self.operateBlock?("\(curTag)-\(curId)")
+                            LTImageView(tag: EventMessageTags.EMT_ContentIcons.content, icon: content.icon, pId: content.pId, operateBlock: { curId, curTag in
                                 self.handleOperation(tag: curTag, id: curId)
                             }).frame(width: adapter.getRelativeWidth(0.9))
  
@@ -128,8 +148,12 @@ public struct LTBrowseView: View {
             .edgesIgnoringSafeArea(.all)
             .onAppear {
                   print("查看页面尺寸\(LTScreenAdapter.SCRE_H) -----------\(LTScreenAdapter.SCRE_W)")
-                self.setupOperationListener()
+                if !didSetupListener {
+                    self.setupOperationListener()
+                    didSetupListener = true
+                }
             }
+            
             .onReceive(dataCenter.$headIconData) { newValue in
                 if  LTBrowseDataCenter.isUseHeadIcon   {
                     self.headIcons = newValue
@@ -145,27 +169,32 @@ public struct LTBrowseView: View {
                     self.contentList = newValue
                 }
             }
-
+            .onReceive(dataCenter.$productsDetailsData) { newValue in
+                 if newValue != nil {
+                     self.productsDetailsData = newValue!
+                 }
+            }
+ 
     }
     
     private  func setupOperationListener() {
-        dataCenter.operationResultPublisher
+        LTBrowseDataCenter.shared.operationResultPublisher
             .receive(on: DispatchQueue.main)
             .sink { success in
-                isGotoList = success // 直接更新状态
-                print("操作完成，跳转状态: \(success)")
+                if success.0 == "List" {
+                    isGotoList = success.1
+                }else {
+                    isHomeGotoDetails = success.1
+                }// 直接更新状态
+                print("home->操作完成，跳转状态: \(success)")
             }
-            .store(in: &cancellables)
+            .store(in: &homeCancellables)
     }
     
     // 新增：统一处理操作逻辑
     private func handleOperation(tag: String, id: Int) {
+           print("操作触发: \(tag)-\(id), 跳转状态:")
            operateBlock?("\(tag)-\(id)")
-         // 根据operateBlock的返回值控制isGotoList
-//        self.isGotoList = operationResult
-         
-         // 如果需要，也可以在这里添加其他逻辑
-         print("操作触发: \(tag)-\(id), 跳转状态:")
      }
  
     
