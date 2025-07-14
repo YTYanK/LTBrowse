@@ -24,37 +24,7 @@ public struct SpecificationsItem: Identifiable,Hashable {
         self.des = des
     }
 }
-
-/// 展示模型
-//public struct DetailsViewModel: Hashable, Identifiable {
-//   public  let id = UUID()
-//   /// 分类目录ID/产品类型
-//   var typeId: Int  = 0
-//   /// 产品ID
-//   var productId: Int
-//   var name: String // 名称
-//   var icon: String = ""  // 图片
-//   var createdAt: Int = 0
-//   var parameter: String = "" // 产品参数
-//   var other: String = ""  //其他信息
-//   var des: String = "描述"
-//   var title: String = "详情页面"
-//    var specifications: [SpecificationsItem]
-//
-//    public init(_ typeId: Int = 0, productId: Int = 0, name: String, icon: String = "", at: Int = 0, parameter: String = "", other: String = "", des: String = "", title: String = "") {
-//        self.typeId = typeId
-//        self.productId = productId
-//        self.name = name
-//        self.icon = icon
-//        self.parameter = parameter
-//        self.other = other
-//        self.des = des
-//        self.title = title
-//        self.createdAt = at
-//    }
-//}
-
-
+ 
 
 @available(iOSApplicationExtension,unavailable)
 @MainActor
@@ -73,33 +43,39 @@ public struct LTBrowseDetailsView: View {
     public var body: some View {
 
         VStack {
-            // 大图
+            // Big picture
             VStack(alignment: .center) {
-                
-                if let image = UIImage(named: produc.icon) {
-                   Image(uiImage: image)
-                       .resizable()
-                       .frame(width: LTB_SCRE_W * 0.9, height: LTB_SCRE_W * 0.9)
-               }else if let urlIcon = URL(string: produc.icon) {
-                   KFImage(urlIcon)
-                       .resizable()  //.aspectRatio(contentMode: .fill)
-                       .frame(width: LTB_SCRE_W * 0.9, height: LTB_SCRE_W * 0.9)
+                //self.dataCenter.fileUrlString
+                 
+                    if let urlIcon = URL(string: dataCenter.fileUrlString +  produc.icon) {
+                       KFImage(urlIcon)
+                           .resizable()
+                           .frame(width: LTB_SCRE_W * 0.9, height: LTB_SCRE_W * 0.9)
 
-               } else {
-                   // 显示默认图片或占位符
-                   Rectangle()
-                       .fill(Color.gray.opacity(0.2))
-                       .frame(width: LTB_SCRE_W * 0.9, height: LTB_SCRE_W * 0.9)
-               }
+                    }else if  let image = UIImage(named: produc.icon) {
+                        Image(uiImage: image)
+                            .resizable()
+                            .frame(width: LTB_SCRE_W * 0.9, height: LTB_SCRE_W * 0.9)
+                        
+                    }else {
+                       // 显示默认图片或占位符
+                       Rectangle()
+                           .fill(Color.gray.opacity(0.2))
+                           .frame(width: LTB_SCRE_W * 0.9, height: LTB_SCRE_W * 0.9)
+                   }
+                 
+                
+               
             
             }
             .background(Color.white)
             .cornerRadius(12)
             .shadow(radius: 1)
             
-            /// 标题
+            // title
             Text(produc.name).frame(width: LTB_SCRE_W * 0.8).multilineTextAlignment(.center)
             
+            // parameter
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(spacing: 2) {
                     HStack {
@@ -142,11 +118,8 @@ public struct LTBrowseDetailsView: View {
         })))
         .onAppear {
         }
-//        .onReceive(dataCenter.$specificationsData) { newValue in
-//            if LTBrowseDataCenter.isUseSpecifications {
-//                self.specifications = newValue
-//            }
-//        }
+        .environment(\.locale, .init(identifier: dataCenter.currentLanguage))
+        
     }
     
     @ViewBuilder
@@ -180,7 +153,7 @@ public struct LTBrowseDetailsView: View {
   
 ]
 
-#Preview { //, specifications: TestItems
+#Preview {  
     LTBrowseDetailsView(produc: ProducModel(productId: 0, name: "eRX电子液压碟刹afefawefawwwefaefaeafefaefaefaefaefafdafeawefawefawefaewfaewfaefawefawefawefawefaefawefaewfawefawefawefawefawefa", icon: "", TestItems)).environmentObject(LTBrowseDataCenter.shared)
 }
  

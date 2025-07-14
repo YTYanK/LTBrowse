@@ -273,29 +273,27 @@ private struct ProductItemView: View {
             
             VStack(alignment: .center, spacing: adapter.setSize(size: 8)) {
                 Group {
-                    if let icon = UIImage(named: item.icon) {
-                        Image(uiImage: icon)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(width: adapter.setSize(size: 120), height:  adapter.setSize(size: 120))
- 
-                    }else if let urlIcon = URL(string: item.icon) {
-                        KFImage(urlIcon)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(width: adapter.setSize(size: 120), height:  adapter.setSize(size: 120))
-       
-                    } else {
-                       // 显示默认图片或占位符
-                       Rectangle()
-                           .fill(Color.gray.opacity(0.2))
-                           .frame(width: adapter.setSize(size: 120), height:  adapter.setSize(size: 120))
- 
-                          
-                   }
+                  
+                        if let urlIcon = URL(string: dataCenter.fileUrlString + item.icon) {
+                            KFImage(urlIcon)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: adapter.setSize(size: 120), height:  adapter.setSize(size: 120))
+           
+                        }else if  let icon = UIImage(named: item.icon) {
+                            Image(uiImage: icon)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: adapter.setSize(size: 120), height:  adapter.setSize(size: 120))
      
-                       
-                    
+                        } else {
+                           // 显示默认图片或占位符
+                           Rectangle()
+                               .fill(Color.gray.opacity(0.2))
+                               .frame(width: adapter.setSize(size: 120), height:  adapter.setSize(size: 120))
+ 
+                       }
+              
                 }
                  .background(Color.white)
                  .cornerRadius(adapter.setSize(size: 10))
@@ -323,6 +321,7 @@ private struct ProductItemView: View {
                 isAppeared = true
             }
         }
+       // .environment(\.locale, .init(identifier: dataCenter.currentLanguage))
         
     }
 }

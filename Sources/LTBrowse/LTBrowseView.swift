@@ -51,12 +51,13 @@ public struct LTBrowseView: View {
     @State private var menuList: [BrowseViewItem]
     @State private var contentList: [BrowseViewItem]
     
+    
     /// 切换返回 tab-index-id
     var toggleCange:((String, Bool)->Void)? = nil
     var operateBlock: ((String)-> Void)? = nil
     
-    @State private var isGotoList: Bool = false
     
+    @State private var isGotoList: Bool = false
     @State private var isHomeGotoDetails: Bool = false
     @State private var currentPage = 0
     @State private var  productsDetailsData: ProducModel = ProducModel()
@@ -64,6 +65,7 @@ public struct LTBrowseView: View {
     @State private var didSetupListener = false
     @State private  var homeCancellables = Set<AnyCancellable>()
     
+    @State private  var lCancellables = Set<AnyCancellable>()
     private let adapter = LTScreenAdapter.shared
     
     public init(headIcons: [BrowseViewItem] = [], menus: [BrowseViewItem] = [], contents: [BrowseViewItem] = [], toggleCange: ((String, Bool)->Void)?, operateBlock: ((String) -> Void)?) {
@@ -102,7 +104,7 @@ public struct LTBrowseView: View {
                         VStack {
                             TabView(selection: $currentPage) {
                                 ForEach(headIcons, id: \.self) { head in
-                                    LTImageView(tag: EventMessageTags.EMT_HeadIcons.content, icon: head.icon, pId: head.pId) { curId, curTag in
+                                    LTImageView(tag: EventMessageTags.EMT_HeadIcons.content, icon: (dataCenter.fileUrlString + head.icon), pId: head.pId) { curId, curTag in
                                         self.handleOperation(tag: curTag, id: curId)
                                     }
                                 }
@@ -116,7 +118,7 @@ public struct LTBrowseView: View {
                         HStack {
                             ForEach(menuList, id: \.self) { menu in
                                VStack {
-                                   LTImageView(tag: EventMessageTags.EMT_MenuIcons.content, icon: menu.icon, pId: menu.pId, operateBlock: { curId, curTag in
+                                   LTImageView(tag: EventMessageTags.EMT_MenuIcons.content, icon: (dataCenter.fileUrlString + menu.icon), pId: menu.pId, operateBlock: { curId, curTag in
                                             self.handleOperation(tag: curTag, id: curId)
                                         })
                                         .background(Color.red)
@@ -134,7 +136,7 @@ public struct LTBrowseView: View {
  
                         // 首页-列表
                         ForEach(contentList, id: \.self) { content in
-                            LTImageView(tag: EventMessageTags.EMT_ContentIcons.content, icon: content.icon, pId: content.pId, operateBlock: { curId, curTag in
+                            LTImageView(tag: EventMessageTags.EMT_ContentIcons.content, icon: (dataCenter.fileUrlString + content.icon), pId: content.pId, operateBlock: { curId, curTag in
                                 self.handleOperation(tag: curTag, id: curId)
                             }).frame(width: adapter.getRelativeWidth(0.9))
  
@@ -150,10 +152,10 @@ public struct LTBrowseView: View {
                   print("查看页面尺寸\(LTScreenAdapter.SCRE_H) -----------\(LTScreenAdapter.SCRE_W)")
                 if !didSetupListener {
                     self.setupOperationListener()
+                    self.setupL()
                     didSetupListener = true
                 }
             }
-            
             .onReceive(dataCenter.$headIconData) { newValue in
                 if  LTBrowseDataCenter.isUseHeadIcon   {
                     self.headIcons = newValue
@@ -174,7 +176,7 @@ public struct LTBrowseView: View {
                      self.productsDetailsData = newValue!
                  }
             }
- 
+            .environment(\.locale, .init(identifier: dataCenter.currentLanguage))
     }
     
     private  func setupOperationListener() {
@@ -189,6 +191,17 @@ public struct LTBrowseView: View {
                 print("home->操作完成，跳转状态: \(success)")
             }
             .store(in: &homeCancellables)
+    }
+    
+    private func setupL() {
+        LTBrowseDataCenter.shared.operationLanguageResultPublisher
+            .receive(on: DispatchQueue.main)
+            .sink { language in
+                dataCenter.currentLanguage = language
+                print("语言查看打印-> \(dataCenter.currentLanguage)")
+                
+            }.store(in: &lCancellables)
+
     }
     
     // 新增：统一处理操作逻辑
