@@ -118,7 +118,7 @@ public struct LTBrowseDetailsView: View {
         })))
         .onAppear {
         }
-        .environment(\.locale, .init(identifier: dataCenter.currentLanguage))
+       // .environment(\.locale, .init(identifier: dataCenter.currentLanguage))
         
     }
     

@@ -176,7 +176,7 @@ public struct LTBrowseView: View {
                      self.productsDetailsData = newValue!
                  }
             }
-            .environment(\.locale, .init(identifier: dataCenter.currentLanguage))
+           // .environment(\.locale, .init(identifier: dataCenter.currentLanguage))
     }
     
     private  func setupOperationListener() {
