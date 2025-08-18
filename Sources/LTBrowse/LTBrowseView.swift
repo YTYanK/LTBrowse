@@ -121,7 +121,7 @@ public struct LTBrowseView: View {
                                    LTImageView(tag: EventMessageTags.EMT_MenuIcons.content, icon: (dataCenter.fileUrlString + menu.icon), pId: menu.pId, operateBlock: { curId, curTag in
                                             self.handleOperation(tag: curTag, id: curId)
                                         })
-                                        .background(Color.red)
+                                        .background(Color.clear)
                                         .frame(width: adapter.setWidth(68), height: adapter.setWidth(68))
 
                                         Text(menu.title)
