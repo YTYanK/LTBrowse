@@ -117,28 +117,37 @@ public struct LTBrowseView: View {
                         // 首页-菜单
                         HStack {
                             ForEach(menuList, id: \.self) { menu in
-                                VStack() { //alignment: .t
-                                   LTImageView(tag: EventMessageTags.EMT_MenuIcons.content, icon: (dataCenter.fileUrlString + menu.icon), pId: menu.pId, operateBlock: { curId, curTag in
+                                ZStack(alignment: .top) {
+                                    Color.clear
+                                        .cornerRadius(adapter.setWidth(8))
+                                    
+                                    VStack() {
+                                        LTImageView(tag: EventMessageTags.EMT_MenuIcons.content,
+                                                    icon: (dataCenter.fileUrlString + menu.icon),
+                                                    pId: menu.pId) { curId, curTag in
                                             self.handleOperation(tag: curTag, id: curId)
-                                   })
-                                    .background(Color.clear)
-                                    .frame(width: adapter.setWidth(68), height: adapter.setWidth(68))
-                                    .clipped()
-                                    .padding(.bottom, adapter.setWidth(8))
-
-                                   Text(menu.title)
-                                    .font(.system(size: adapter.setFont(size: 13), weight: .medium))
-                                    .foregroundColor(menu.theme)
-                                    .multilineTextAlignment(.center)
-                                    .lineLimit(2)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                    .frame(width: adapter.setWidth(68))
-                                    .onTapGesture {
-                                        self.handleOperation(tag: EventMessageTags.EMT_MenuIcons.content, id: menu.pId)
+                                        }
+                                        .background(Color.clear)
+                                        .frame(width: adapter.setWidth(68), height: adapter.setWidth(68))
+                                        .clipped()
+                                        
+                                        Text(menu.title)
+                                        .font(.system(size: adapter.setFont(size: 13), weight: .medium))
+                                        .foregroundColor(menu.theme)
+                                        .multilineTextAlignment(.center)
+                                        .lineLimit(2)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                        .frame(width: adapter.setWidth(68))
+                                        .onTapGesture {
+                                            self.handleOperation(tag: EventMessageTags.EMT_MenuIcons.content, id: menu.pId)
+                                        }
                                     }
-                               }.padding(adapter.setSize(size: 6)).background(Color.red)
+                                       
+                                }
                             }
-                        }.padding(.vertical,adapter.setHeight(10))
+                        }
+                        //.frame(height: adapter.setWidth(100))
+                        .padding(.vertical,adapter.setHeight(10))
  
                         // 首页-列表
                         ForEach(contentList, id: \.self) { content in
