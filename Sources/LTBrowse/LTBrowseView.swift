@@ -117,20 +117,26 @@ public struct LTBrowseView: View {
                         // 首页-菜单
                         HStack {
                             ForEach(menuList, id: \.self) { menu in
-                               VStack {
+                                VStack() { //alignment: .t
                                    LTImageView(tag: EventMessageTags.EMT_MenuIcons.content, icon: (dataCenter.fileUrlString + menu.icon), pId: menu.pId, operateBlock: { curId, curTag in
                                             self.handleOperation(tag: curTag, id: curId)
-                                        })
-                                        .background(Color.clear)
-                                        .frame(width: adapter.setWidth(68), height: adapter.setWidth(68))
+                                   })
+                                    .background(Color.clear)
+                                    .frame(width: adapter.setWidth(68), height: adapter.setWidth(68))
+                                    .clipped()
+                                    .padding(.bottom, adapter.setWidth(8))
 
-                                        Text(menu.title)
-                                            .font(.system(size: adapter.setFont(size: 13), weight: .medium))
-                                            .foregroundColor(menu.theme)
-                                            .onTapGesture {
-                                                self.handleOperation(tag: EventMessageTags.EMT_MenuIcons.content, id: menu.pId)
-                                            }
-                                    }.padding(adapter.setSize(size: 6))
+                                   Text(menu.title)
+                                    .font(.system(size: adapter.setFont(size: 13), weight: .medium))
+                                    .foregroundColor(menu.theme)
+                                    .multilineTextAlignment(.center)
+                                    .lineLimit(2)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .frame(width: adapter.setWidth(68))
+                                    .onTapGesture {
+                                        self.handleOperation(tag: EventMessageTags.EMT_MenuIcons.content, id: menu.pId)
+                                    }
+                               }.padding(adapter.setSize(size: 6)).background(Color.red)
                             }
                         }.padding(.vertical,adapter.setHeight(10))
  
