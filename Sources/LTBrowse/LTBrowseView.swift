@@ -146,25 +146,27 @@ public struct LTBrowseView: View {
                                 }
                             }
                         }
-                        //.frame(height: adapter.setWidth(100))
                         .padding(.vertical,adapter.setHeight(10))
  
                         // 首页-列表
                         ForEach(contentList, id: \.self) { content in
+                            
                             LTImageView(tag: EventMessageTags.EMT_ContentIcons.content, icon: (dataCenter.fileUrlString + content.icon), pId: content.pId, operateBlock: { curId, curTag in
                                 self.handleOperation(tag: curTag, id: curId)
-                            }).frame(width: adapter.getRelativeWidth(0.9))
- 
+                            }).frame(width: adapter.getRelativeWidth(0.9)) 
                         }
-                        
+                        Color.clear.frame(height:  dataCenter.tabBarHeight) // 根据实际 TabBar 高度调整
                         Spacer()
                   }
                }
             }
             .navigationBarHidden(true)
             .edgesIgnoringSafeArea(.all)
+//            .ignoresSafeArea(.all, edges: .bottom)
             .onAppear {
                   print("查看页面尺寸\(LTScreenAdapter.SCRE_H) -----------\(LTScreenAdapter.SCRE_W)")
+                
+                self.dataCenter.tabBarHeight = LTScreenAdapter.shared.getTabBarHeight()
                 if !didSetupListener {
                     self.setupOperationListener()
                     self.setupL()
@@ -214,7 +216,6 @@ public struct LTBrowseView: View {
             .sink { language in
                 dataCenter.currentLanguage = language
                 print("语言查看打印-> \(dataCenter.currentLanguage)")
-                
             }.store(in: &lCancellables)
 
     }

@@ -82,7 +82,7 @@ public class WrapperModel: ObservableObject {
 public class LTBrowseDataCenter: ObservableObject {
     public static let shared = LTBrowseDataCenter()
     
-    
+    @Published var tabBarHeight: CGFloat = 49.0
     @Published var currentLanguage: String = "cn" {
          didSet {
              // 这里可以添加持久化语言的逻辑

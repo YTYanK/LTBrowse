@@ -174,11 +174,28 @@ public class LTScreenAdapter {
         return getSafeAreaInsets().top
     }
     
-    // 获取底部安全区域高度（刘海屏的底部区域）
+    /// 获取底部安全区域高度（刘海屏的底部区域）
     public func getBottomSafeAreaHeight() -> CGFloat {
         return getSafeAreaInsets().bottom
     }
-} 
+    
+    /// 获取TabBar的高度
+    public func getTabBarHeight() -> CGFloat {
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene, let window = windowScene.windows.first else {
+            return 49.0
+        }
+        let bottomSafeArea = window.safeAreaInsets.bottom
+        return 49.0 + bottomSafeArea
+    }
+    // 全面屏设备检测
+    public func hasBottomSafeArea() -> Bool {
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                      let window = windowScene.windows.first else {
+                    return false
+        }
+        return window.safeAreaInsets.bottom > 0
+    }
+}
 
 public extension LTScreenAdapter {
     static let SCRE_H = UIScreen.main.bounds.height
