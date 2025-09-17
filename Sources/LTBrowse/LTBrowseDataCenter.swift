@@ -47,8 +47,73 @@ public struct BrowseViewItem: Hashable, Identifiable {
         self.theme = theme
         self.carrying = carrying
     }
-}
+    
+    
+//    /// 示例：解析 Banner 的操作数据
+//      public struct BannerOperateData: Codable {
+//          let operateType: String
+//          let operateUrl: String
+//      }
+//      public func getBannerOperateData() -> BannerOperateData? {
+//            return carryingToObject(BannerOperateData.self)
+//      }
+    /// 将 carrying 字符串解析为字典
+    public func carryingToDictionary() -> [String: Any]? {
+        guard let data = carrying.data(using: .utf8) else { return nil }
+        return try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+    }
+    /// 将 carrying 字符串解析为指定类型（使用 JSONDecoder）
+    public func carryingToObject<T: Decodable>(_ type: T.Type) -> T? {
+        guard let data = carrying.data(using: .utf8) else { return nil }
+        return try? JSONDecoder().decode(type, from: data)
+    }
+    
+    
  
+    // 转出字符串
+    func recoverJSONString() -> String  {
+        let dict: [String: Any] = [
+            "id": id.uuidString,
+            "pId": pId,
+            "title": title,
+            "icon": icon,
+        ]
+        
+        if let operateData = self.carryingToDictionary() {
+            let mergedDict = dict.merging(operateData) { (current, new) in
+                return new // 使用新值覆盖旧值
+            }
+           do {
+               let jsonData = try JSONSerialization.data(withJSONObject: mergedDict, options: .prettyPrinted)
+               return String(data: jsonData, encoding: .utf8) ?? ""
+           } catch {
+               print("JSON 转换失败: \(error)")
+               return ""
+           }
+            
+        }else {
+            do {
+                let jsonData = try JSONSerialization.data(withJSONObject: dict, options: .prettyPrinted)
+                return String(data: jsonData, encoding: .utf8)  ?? ""
+            } catch {
+                print("JSON 转换失败: \(error)")
+                return ""
+            }
+        }
+ 
+        
+   }
+}
+extension BrowseViewItem {
+  
+}
+ /*
+  public struct FirstBannerList:  Codable {
+      var imageUrl: String
+      var productId: Int
+      var operateType: String
+      var operateUrl: String
+  */
  
 
 @MainActor
@@ -444,14 +509,24 @@ public struct HomepageModel: Codable {
 public struct FirstBannerList:  Codable {
     var imageUrl: String
     var productId: Int
+    /// 0 = 无操作， 1 = 详情, 2 = 跳网页
+    var operateType: String
+    var operateUrl: String?
    // var themeColor: ColorDTO?
     /// 构建 BrowseViewItem 模型
-     func toBrowseViewItem(_ theme:ColorDTO? = nil) -> BrowseViewItem {
+    func toBrowseViewItem(_ theme:ColorDTO? = nil) -> BrowseViewItem {
+        let jsonDict: [String: Any] = [
+         "operateType": operateType,
+         "operateUrl": operateUrl
+        ]
+        let jsonData = try? JSONSerialization.data(withJSONObject: jsonDict)
+        let jsonString = String(data: jsonData ?? Data(), encoding: .utf8) ?? ""
         return BrowseViewItem(
             pId: productId,
             title: "",
             icon:  imageUrl, //LTBrowseDataCenter.shared.getFileUrl() +
-            theme: theme?.toColor() ?? .blue
+            theme: theme?.toColor() ?? .blue,
+            jsonString
         )
     }
 }

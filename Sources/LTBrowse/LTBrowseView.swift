@@ -54,7 +54,8 @@ public struct LTBrowseView: View {
     
     /// 切换返回 tab-index-id
     var toggleCange:((String, Bool)->Void)? = nil
-    var operateBlock: ((String)-> Void)? = nil
+    /// 参数2 = JSON
+    var operateBlock: ((String,String)-> Void)? = nil
     
     
     @State private var isGotoList: Bool = false
@@ -68,7 +69,7 @@ public struct LTBrowseView: View {
     @State private  var lCancellables = Set<AnyCancellable>()
     private let adapter = LTScreenAdapter.shared
     
-    public init(headIcons: [BrowseViewItem] = [], menus: [BrowseViewItem] = [], contents: [BrowseViewItem] = [], toggleCange: ((String, Bool)->Void)?, operateBlock: ((String) -> Void)?) {
+    public init(headIcons: [BrowseViewItem] = [], menus: [BrowseViewItem] = [], contents: [BrowseViewItem] = [], toggleCange: ((String, Bool)->Void)?, operateBlock: ((String,String) -> Void)?) {
        
         let initialHeadIcons = LTBrowseDataCenter.isUseHeadIcon ?  LTBrowseDataCenter.getHeadIconData() :  headIcons
         let initialMenuList = LTBrowseDataCenter.isUseMenuList ?  LTBrowseDataCenter.getMenuList() : menus
@@ -88,8 +89,8 @@ public struct LTBrowseView: View {
                 NavigationLink("_", isActive: $isGotoList) {
                     LTBrowseListView(onTabChange: { newTab, newTId  in
                         self.toggleCange?("\(EventMessageTags.EMT_Tab.content)-\(newTab)-\(newTId)", true)
-                    }, onClickDetails: { newPId in
-                        self.handleOperation(tag: EventMessageTags.EMT_ListIcons.content, id: newPId) //Details
+                    }, onClickDetails: { newPId,item in
+                        self.handleOperation(tag: EventMessageTags.EMT_ListIcons.content, id: newPId, json: item.recoverJSONString()) //Details
                     }).navigationBarBackButtonHidden().environmentObject(self.dataCenter)
                 }.hidden()
                 
@@ -105,7 +106,7 @@ public struct LTBrowseView: View {
                             TabView(selection: $currentPage) {
                                 ForEach(headIcons, id: \.self) { head in
                                     LTImageView(tag: EventMessageTags.EMT_HeadIcons.content, icon: (dataCenter.fileUrlString + head.icon), pId: head.pId) { curId, curTag in
-                                        self.handleOperation(tag: curTag, id: curId)
+                                        self.handleOperation(tag: curTag, id: curId,json: head.recoverJSONString())
                                     }
                                 }
  
@@ -125,7 +126,7 @@ public struct LTBrowseView: View {
                                         LTImageView(tag: EventMessageTags.EMT_MenuIcons.content,
                                                     icon: (dataCenter.fileUrlString + menu.icon),
                                                     pId: menu.pId) { curId, curTag in
-                                            self.handleOperation(tag: curTag, id: curId)
+                                            self.handleOperation(tag: curTag, id: curId,json: menu.recoverJSONString())
                                         }
                                         .background(Color.clear)
                                         .frame(width: adapter.setWidth(68), height: adapter.setWidth(68))
@@ -139,7 +140,7 @@ public struct LTBrowseView: View {
                                         .fixedSize(horizontal: false, vertical: true)
                                         .frame(width: adapter.setWidth(68))
                                         .onTapGesture {
-                                            self.handleOperation(tag: EventMessageTags.EMT_MenuIcons.content, id: menu.pId)
+                                            self.handleOperation(tag: EventMessageTags.EMT_MenuIcons.content, id: menu.pId, json:menu.recoverJSONString())
                                         }
                                     }
                                        
@@ -152,8 +153,8 @@ public struct LTBrowseView: View {
                         ForEach(contentList, id: \.self) { content in
                             
                             LTImageView(tag: EventMessageTags.EMT_ContentIcons.content, icon: (dataCenter.fileUrlString + content.icon), pId: content.pId, operateBlock: { curId, curTag in
-                                self.handleOperation(tag: curTag, id: curId)
-                            }).frame(width: adapter.getRelativeWidth(0.9)) 
+                                self.handleOperation(tag: curTag, id: curId,json: content.recoverJSONString())
+                            }).frame(width: adapter.getRelativeWidth(0.9))
                         }
                         Color.clear.frame(height:  dataCenter.tabBarHeight) // 根据实际 TabBar 高度调整
                         Spacer()
@@ -221,9 +222,9 @@ public struct LTBrowseView: View {
     }
     
     // 新增：统一处理操作逻辑
-    private func handleOperation(tag: String, id: Int) {
+    private func handleOperation(tag: String, id: Int,json:String) {
            print("操作触发: \(tag)-\(id), 跳转状态:")
-           operateBlock?("\(tag)-\(id)")
+           operateBlock?("\(tag)-\(id)",json)
      }
  
     

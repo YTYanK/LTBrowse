@@ -38,6 +38,34 @@ public struct ProducModel: Identifiable, Hashable {
         self.createdAt = at
         self.specifications = specifications
     }
+    
+    
+   // 转出字符串
+   func recoverJSONString() -> String  {
+       let dict: [String: Any] = [
+           "id": id.uuidString,
+           "typeId": typeId,
+           "productId": productId,
+           "name": name,
+           "icon": icon,
+           "createdAt": createdAt,
+           "parameter": parameter,
+           "des": des,
+           "title": title
+       ]
+       
+   
+       do {
+           let jsonData = try JSONSerialization.data(withJSONObject: dict, options: .prettyPrinted)
+           return String(data: jsonData, encoding: .utf8)  ?? ""
+       } catch {
+           print("JSON 转换失败: \(error)")
+           return ""
+       }
+        
+
+       
+  }
 }
 
  
@@ -77,9 +105,9 @@ public struct LTBrowseListView: View {
     @Environment(\.presentationMode) var presentationMode
    
     var onTabChange: ((_ indx:Int, _ tId:Int) -> Void)?
-    var onClickDetails:((Int) -> Void)?
+    var onClickDetails:((Int,ProducModel) -> Void)?
     
-    public init(onTabChange: ((Int, Int) -> Void)? = nil, onClickDetails: ((Int) -> Void)? = nil) {
+    public init(onTabChange: ((Int, Int) -> Void)? = nil, onClickDetails: ((Int,ProducModel) -> Void)? = nil) {
         self.onTabChange = onTabChange
         self.onClickDetails = onClickDetails
     }
@@ -126,7 +154,7 @@ public struct LTBrowseListView: View {
                             ScrollView {
                                 StaggeredGrid(columns: 2, spacing: adapter.setSize(size: 10), list: products) { item in
                                     ProductItemView(goToDetails: $goDetails,item: item, onClickDetails: { PId in
-                                        self.onClickDetails?(PId)
+                                        self.onClickDetails?(PId,item)
                                     }).environmentObject(self.dataCenter)
                                     
                                 }
