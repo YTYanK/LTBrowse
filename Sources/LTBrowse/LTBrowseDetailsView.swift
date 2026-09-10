@@ -32,6 +32,7 @@ public struct LTBrowseDetailsView: View {
     
     @State var produc: ProducModel
     @State private var specifications: Array<SpecificationsItem>
+    @State private var isShowingImagePreview = false
     @EnvironmentObject private var dataCenter: LTBrowseDataCenter
     @Environment(\.presentationMode) var presentationMode
     
@@ -61,14 +62,16 @@ public struct LTBrowseDetailsView: View {
                            .fill(Color.gray.opacity(0.2))
                            .frame(width: LTB_SCRE_W * 0.9, height: LTB_SCRE_W * 0.9)
                    }
-                 
-                
-               
-            
+ 
             }
             .background(Color.white)
             .cornerRadius(12)
             .shadow(radius: 1)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                guard !produc.icon.isEmpty else { return }
+                isShowingImagePreview = true
+            }
             
             // title
             Text(produc.name).frame(width: LTB_SCRE_W * 0.8).multilineTextAlignment(.center)
@@ -116,6 +119,9 @@ public struct LTBrowseDetailsView: View {
         })))
         .onAppear {
         }
+        .fullScreenCover(isPresented: $isShowingImagePreview) {
+            LTBrowseImagePreview(icon: produc.icon)
+        }
        // .environment(\.locale, .init(identifier: dataCenter.currentLanguage))
         
     }
@@ -151,6 +157,124 @@ public struct LTBrowseDetailsView: View {
         default:
             return des
         }
+    }
+}
+
+@available(iOSApplicationExtension, unavailable)
+private struct LTBrowseImagePreview: View {
+    let icon: String
+    @Environment(\.presentationMode) private var presentationMode
+    
+    @State private var scale: CGFloat = 1
+    @State private var lastScale: CGFloat = 1
+    @State private var offset: CGSize = .zero
+    @State private var lastOffset: CGSize = .zero
+    
+    var body: some View {
+        ZStack {
+            Color.black.edgesIgnoringSafeArea(.all)
+            
+            previewImage
+                .scaleEffect(scale)
+                .offset(offset)
+                .gesture(doubleTapGesture)
+                .simultaneousGesture(magnificationGesture)
+                .simultaneousGesture(dragGesture)
+            
+            VStack {
+                HStack {
+                    Spacer()
+                    Button(action: dismiss) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(width: 32, height: 32)
+                            .background(Color.white.opacity(0.25))
+                            .clipShape(Circle())
+                    }
+                    .padding(.trailing, 20)
+                    .padding(.top, 16)
+                }
+                Spacer()
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private var previewImage: some View {
+        if let url = URL(string: icon), !icon.isEmpty {
+            KFImage(url)
+                .resizable()
+                .scaledToFit()
+        } else if let image = UIImage(named: icon) {
+            Image(uiImage: image)
+                .resizable()
+                .scaledToFit()
+        }
+    }
+    
+    private var magnificationGesture: some Gesture {
+        MagnificationGesture()
+            .onChanged { value in
+                scale = min(max(lastScale * value, 1), 5)
+            }
+            .onEnded { _ in
+                lastScale = scale
+                if scale <= 1 {
+                    resetZoom()
+                }
+            }
+    }
+    
+    private var dragGesture: some Gesture {
+        DragGesture()
+            .onChanged { value in
+                if scale > 1 {
+                    offset = CGSize(
+                        width: lastOffset.width + value.translation.width,
+                        height: lastOffset.height + value.translation.height
+                    )
+                } else {
+                    offset = CGSize(width: 0, height: value.translation.height)
+                }
+            }
+            .onEnded { value in
+                if scale <= 1 {
+                    if value.translation.height > 100 {
+                        dismiss()
+                    } else {
+                        withAnimation(.easeOut(duration: 0.2)) {
+                            resetZoom()
+                        }
+                    }
+                } else {
+                    lastOffset = offset
+                }
+            }
+    }
+    
+    private var doubleTapGesture: some Gesture {
+        TapGesture(count: 2).onEnded {
+            withAnimation(.easeInOut(duration: 0.25)) {
+                if scale > 1 {
+                    resetZoom()
+                } else {
+                    scale = 2.5
+                    lastScale = 2.5
+                }
+            }
+        }
+    }
+    
+    private func resetZoom() {
+        scale = 1
+        lastScale = 1
+        offset = .zero
+        lastOffset = .zero
+    }
+    
+    private func dismiss() {
+        presentationMode.wrappedValue.dismiss()
     }
 }
 

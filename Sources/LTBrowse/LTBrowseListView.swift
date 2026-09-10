@@ -256,30 +256,82 @@ private struct TabItemView: View {
   private let adapter = LTScreenAdapter.shared
   private let colorDF = Color(UIColor(red: 223/255, green: 223/255, blue: 223/255, alpha: 1))
   
+  private var minTabWidth: CGFloat { adapter.setWidth(80) }
+  private var horizontalPadding: CGFloat { adapter.setSize(size: 8) }
+  private var fontSize: CGFloat { adapter.setFont(size: isSelected ? 18 : 15) }
+  
   var body: some View {
       Button(action: action) {
-          VStack(spacing: adapter.setSize(size: 4)) {
-              Text(tab.name)
-                  .font(.system(size: adapter.setFont(size: isSelected ? 18 : 15)))
-                  .fontWeight(.bold)
-              Text(tab.gearValue)
-                  .font(.system(size: adapter.setFont(size: 13)))
-                  .fontWeight(.light)
-          }
-          .foregroundColor(isSelected ? .white : .black)
-          .frame(width: adapter.setWidth(80),
-                 height: adapter.setHeight(isSelected ? 65 : 55))
-          .background(
-              RoundedRectangle(cornerRadius: adapter.setSize(size: 12))
-                  .fill(isSelected ? Color.black : colorDF)
-          )
-          // 添加过渡动画
-          // .scaleEffect(isSelected ? 1.05 : 1.0)
-          .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
-          // 添加匹配几何效果
-          .matchedGeometryEffect(id: "tab\(tab.id)", in: namespace, isSource: isSelected)
+          Text(tab.name)
+              .font(.system(size: fontSize, weight: .bold))
+              .multilineTextAlignment(.center)
+              .lineLimit(2)
+              .fixedSize(horizontal: false, vertical: true)
+              .frame(width: textWidth)
+              .foregroundColor(isSelected ? .white : .black)
+              .padding(.horizontal, horizontalPadding)
+              .padding(.vertical, adapter.setSize(size: 8))
+              .frame(minHeight: adapter.setHeight(isSelected ? 52 : 44))
+              .background(
+                  RoundedRectangle(cornerRadius: adapter.setSize(size: 12))
+                      .fill(isSelected ? Color.black : colorDF)
+              )
+              // 添加过渡动画
+              // .scaleEffect(isSelected ? 1.05 : 1.0)
+              .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
+              // 添加匹配几何效果
+              .matchedGeometryEffect(id: "tab\(tab.id)", in: namespace, isSource: isSelected)
       }
       .buttonStyle(PlainButtonStyle())
+  }
+  
+  /// 默认按最小宽度排两行；两行仍放不下时再加宽
+  private var textWidth: CGFloat {
+      let minContentWidth = minTabWidth - horizontalPadding * 2
+      let maxContentWidth = LTB_SCRE_W - adapter.setSize(size: 32) - horizontalPadding * 2
+      return Self.widthToFitTwoLines(
+          text: tab.name,
+          font: .systemFont(ofSize: fontSize, weight: .bold),
+          minWidth: minContentWidth,
+          maxWidth: max(minContentWidth, maxContentWidth)
+      )
+  }
+  
+  private static func widthToFitTwoLines(text: String, font: UIFont, minWidth: CGFloat, maxWidth: CGFloat) -> CGFloat {
+      let content = text.trimmingCharacters(in: .whitespacesAndNewlines)
+      guard !content.isEmpty else { return minWidth }
+      
+      let twoLineHeight = font.lineHeight * 2 + 1
+      
+      func textHeight(for width: CGFloat) -> CGFloat {
+          ceil((content as NSString).boundingRect(
+              with: CGSize(width: width, height: .greatestFiniteMagnitude),
+              options: [.usesLineFragmentOrigin, .usesFontLeading],
+              attributes: [.font: font],
+              context: nil
+          ).height)
+      }
+      
+      if textHeight(for: minWidth) <= twoLineHeight {
+          return minWidth
+      }
+      
+      var low = minWidth
+      var high = min(maxWidth, ceil((content as NSString).size(withAttributes: [.font: font]).width) + 2)
+      if high <= low {
+          return min(maxWidth, minWidth)
+      }
+      
+      for _ in 0..<16 {
+          let mid = (low + high) / 2
+          if textHeight(for: mid) <= twoLineHeight {
+              high = mid
+          } else {
+              low = mid
+          }
+          if high - low < 1 { break }
+      }
+      return ceil(high)
   }
 }
 
