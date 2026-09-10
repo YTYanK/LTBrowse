@@ -121,22 +121,36 @@ public struct LTBrowseDetailsView: View {
     }
     
     @ViewBuilder
-    private func setCell(item:SpecificationsItem) -> some View {
-        let _item = item
-        VStack(spacing: 2){
-            HStack {
-               Text(_item.title)
-               Spacer()
-               Text(_item.des)
-            }.frame(height: 44)
+    private func setCell(item: SpecificationsItem) -> some View {
+        VStack(spacing: 2) {
+            HStack(alignment: .center, spacing: 12) {
+                Text(item.title)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                
+                Text(displayDes(item.des))
+            }
+            .frame(minHeight: 44)
             
             if item != specifications.last {
                 Divider()
             }
         }
-         .padding(.vertical,2)
-         .padding(.horizontal, 25)
-         .foregroundColor(.black)
+        .padding(.vertical, 2)
+        .padding(.horizontal, 25)
+        .foregroundColor(.black)
+    }
+    
+    private func displayDes(_ des: String) -> String {
+        switch des.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "true":
+            return "✅"
+        case "false":
+            return "❌"
+        default:
+            return des
+        }
     }
 }
 
