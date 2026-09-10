@@ -302,7 +302,7 @@ private struct ProductItemView: View {
             VStack(alignment: .center, spacing: adapter.setSize(size: 8)) {
                 Group {
                   
-                        if let urlIcon = URL(string: dataCenter.fileUrlString + item.icon) {
+                        if let urlIcon = URL(string: item.icon) {
                             KFImage(urlIcon)
                                 .resizable()
                                 .aspectRatio(contentMode: .fill)
