@@ -46,7 +46,10 @@ public struct LTBrowseDetailsView: View {
         VStack {
             // Big picture
             VStack(alignment: .center) {
-                    if let urlIcon = URL(string: produc.icon) {
+                let fullURLString = produc.icon.lowercased().hasPrefix("http")
+                    ? produc.icon
+                    : dataCenter.fileUrlString + produc.icon
+                    if let urlIcon = URL(string: fullURLString) {
                        KFImage(urlIcon)
                            .resizable()
                            .frame(width: LTB_SCRE_W * 0.9, height: LTB_SCRE_W * 0.9)
