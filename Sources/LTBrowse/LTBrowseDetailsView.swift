@@ -123,7 +123,10 @@ public struct LTBrowseDetailsView: View {
         .onAppear {
         }
         .fullScreenCover(isPresented: $isShowingImagePreview) {
-            LTBrowseImagePreview(icon: produc.icon)
+            let fullURLString = produc.icon.lowercased().hasPrefix("http")
+                ? produc.icon
+                : dataCenter.fileUrlString + produc.icon
+            LTBrowseImagePreview(icon: fullURLString)
         }
        // .environment(\.locale, .init(identifier: dataCenter.currentLanguage))
         
@@ -205,6 +208,7 @@ private struct LTBrowseImagePreview: View {
     
     @ViewBuilder
     private var previewImage: some View {
+        
         if let url = URL(string: icon), !icon.isEmpty {
             KFImage(url)
                 .resizable()
